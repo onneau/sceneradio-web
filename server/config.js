@@ -20,7 +20,7 @@ function packageVersion() {
   try {
     return JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).version;
   } catch {
-    return '1.0.0';
+    return '1.1.1';
   }
 }
 

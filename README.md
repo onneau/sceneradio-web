@@ -38,6 +38,15 @@ docker compose pull
 docker compose up -d
 ```
 
+## Using the player
+
+- **Player**: the visualizer fills the whole screen and adapts to the shape of your screen (landscape, portrait or widescreen). That also works when you resize the window or turn the phone.
+- **Controls**: previous, pause, next and volume are laid over the picture. While music is playing they disappear after 8 seconds; move the mouse or tap the picture to bring them back. When paused or on an error they stay.
+- **Menus**: the menu at the top left opens Stations and Settings, each on its own page. "← Player" takes you back; after choosing a station you go back to the visualizer by itself. The menu pages have a mini player at the bottom.
+- **Back to the visualizer**: the menus go back to the visualizer by themselves after 10 seconds without movement, tap or key press (only while music is playing, not while you are typing). Esc does it right away.
+- **Keys**: space bar = pause, ← and → = previous or next station, F = full screen (or the button at the top right).
+- On opening, the page shows the player if there is a last station, otherwise the station list.
+
 ## Settings (environment variables)
 
 All optional.
@@ -102,6 +111,22 @@ location / {
 - **The visualizer** uses WebAudio. On an old iPhone or iPad that can stutter: turn it off in Settings; you then see the logo.
 - Pausing with a live stream is "disconnecting"; playing picks up the live stream again.
 - The backup is not encrypted. A backup of an Android app does not fit here.
+
+## Testing locally (test server)
+
+Before you publish anything you can try the web app on your own computer, for example in the Linux environment of a Chromebook. The test server uses a simulated GitHub with sample stations (`dev/seed`), so nothing in your repositories is touched.
+
+```bash
+sh testserver.sh            # demo with sample stations
+sh testserver.sh --live     # the real station list from the public sceneradio-m3u repository
+```
+
+Then open <http://localhost:8081> in Chrome. Stop with Ctrl+C.
+
+- `--live` needs no token: the default list is public. You can point it at your own copy with `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_REF` and `PLAYLIST_PATH`.
+- `--update` pretends a newer version exists (to see the update notice), `--poort 8082` picks another port.
+- Playing streams and looking up covers also go over the internet in the demo. Only a few stations in the demo have a logo.
+- The script uses Node.js 20 or newer; without it, it uses Docker, and otherwise it tells you how to install Node.js.
 
 ## Development
 

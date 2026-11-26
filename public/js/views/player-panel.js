@@ -1,14 +1,16 @@
-// Het spelerpaneel (rechts op een groot scherm, eigen pagina op een telefoon) en de mini-speler.
+// De speler: de visualizer vult de hele pagina, met de bediening erover (die na een tijdje verdwijnt), en de mini-speler.
 import { h, icon, logoImage, replace } from '../dom.js';
 import { state, subscribe, currentStation, activeSlogans, DIM_DELAY_SECONDS, DIM_LEVEL } from '../state.js';
 import { toggle, step, setVolume, getLevels, resume } from '../player.js';
-import { AmigaRenderer, loadFonts, scrollText } from '../visualizer.js';
+import { AmigaRenderer, loadFonts, logicalSize, scrollText } from '../visualizer.js';
 import { tr } from '../i18n.js';
 import { BRAND } from '../brand.js';
+import { onActivity } from '../activity.js';
 
 let renderer = null;
 let fontsFailed = false;
 const startTime = performance.now();
+const HUD_HIDE_SECONDS = 8; // de bediening verdwijnt na zoveel seconden zonder beweging, tik of toets
 
 function statusText() {
   switch (state.status) {
@@ -44,9 +46,10 @@ export function createPlayerPanel() {
   const visWrap = h('div', { class: 'vis-wrap', 'aria-hidden': 'true' });
   const visBox = h('div', { class: 'vis-box' }, visWrap, dimLayer);
   const name = h('div', { class: 'pn' });
-  const artist = h('div', { class: 'pa' });
+  const dot = h('span', { class: 'dot' });
+  const artist = h('span', {});
   const coverButton = h('button', { class: 'pcover', type: 'button', hidden: true, onclick: () => state.art && openFullScreen(state.art) });
-  const now = h('div', { class: 'np' }, coverButton, h('div', { class: 'npt' }, name, artist));
+  const now = h('div', { class: 'np' }, coverButton, h('div', { class: 'npt' }, name, h('div', { class: 'pa' }, dot, artist)));
   const prev = h('button', { class: 'b', type: 'button', onclick: () => step(-1) }, icon('prev', 30));
   const next = h('button', { class: 'b', type: 'button', onclick: () => step(1) }, icon('next', 30));
   const big = h('button', { class: 'big', type: 'button', onclick: toggle });
@@ -55,18 +58,18 @@ export function createPlayerPanel() {
     oninput: (e) => { setVolume(Number(e.target.value) / 100); fillRange(e.target); }
   });
   const volumeText = h('output', {}, '');
-  const dot = h('span', { class: 'dot' });
-  const liveText = h('span', {});
-  const tag = h('span', { class: 'tag2' }, 'stream-proxy');
   const errorBox = h('div', { class: 'err-box', hidden: true });
-  const hint = h('div', { class: 'hint' });
+  const menuButton = h('button', { class: 'hud-btn menu', type: 'button', onclick: () => { location.hash = 'zenders'; } }, icon('menu', 26));
+  const fullButton = h('button', { class: 'hud-btn fs', type: 'button', hidden: !document.fullscreenEnabled, onclick: toggleFullScreen }, icon('fullscreen', 24));
+  const choose = h('button', { class: 'btn f cta', type: 'button', onclick: () => { location.hash = 'zenders'; } });
+  const hint = h('div', { class: 'hud-hint' });
+  const bottom = h('div', { class: 'hud-bottom' },
+    errorBox,
+    h('div', { class: 'bar2' }, now, h('div', { class: 'ctl' }, prev, big, next), h('div', { class: 'vol' }, icon('vol', 22), volume, volumeText)));
 
-  const panel = h('aside', { class: 'pp' },
-    visBox, now,
-    h('div', { class: 'ctl' }, prev, big, next),
-    h('div', { class: 'vol' }, icon('vol', 22), volume, volumeText),
-    h('div', { class: 'live' }, dot, liveText, tag),
-    errorBox, hint);
+  // De bediening ligt over het beeld en verdwijnt na HUD_HIDE_SECONDS zonder beweging, tik of toets (alleen tijdens het spelen).
+  const hud = h('div', { class: 'hud' }, menuButton, fullButton, hint, choose, bottom);
+  const panel = h('aside', { class: 'pp' }, visBox, hud);
 
   const stillLogo = { id: null, node: null };
   let shownCover = null;
@@ -76,10 +79,44 @@ export function createPlayerPanel() {
     volumeText.textContent = `${input.value}%`;
   }
 
-  /** De hoes in de speler: een vierkantje naast de tekst (of erboven), met het logo van de zender als badge. */
+  function toggleFullScreen() {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  document.addEventListener('fullscreenchange', () => {
+    fullButton.replaceChildren(icon(document.fullscreenElement ? 'fullscreenExit' : 'fullscreen', 24));
+    render();
+  });
+  document.addEventListener('keydown', (event) => {
+    const tag = event.target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || event.metaKey || event.ctrlKey || event.altKey) return;
+    if ((event.key === 'f' || event.key === 'F') && panel.offsetParent !== null) toggleFullScreen();
+  });
+
+  let hudTimer = 0;
+  let holding = false;   // een vinger of muisknop is omlaag op de bediening (bijvoorbeeld het volume verschuiven)
+  /** Alleen terwijl er muziek speelt (of verbonden wordt) verdwijnt de bediening; bij pauze of een storing blijft ze staan. */
+  const hideable = () => state.status === 'playing' || state.status === 'loading';
+  let lastHideable = false;
+  function hideHud() {
+    if (holding || !hideable()) return;   // zodra de vinger loslaat of de muziek weer speelt, start wakeHud de tijd opnieuw
+    if (panel.contains(document.activeElement)) document.activeElement.blur();
+    panel.classList.add('hud-off');
+  }
+  function wakeHud() {
+    panel.classList.remove('hud-off');
+    clearTimeout(hudTimer);
+    hudTimer = setTimeout(hideHud, HUD_HIDE_SECONDS * 1000);
+  }
+  // Aankomen op de speler (zender gekozen, terug uit een menu): de bediening laten zien en de tijd opnieuw starten.
+  new MutationObserver(() => { if (document.body.dataset.view === 'speler') wakeHud(); })
+    .observe(document.body, { attributes: true, attributeFilter: ['data-view'] });
+  hud.addEventListener('pointerdown', () => { holding = true; });
+  for (const type of ['pointerup', 'pointercancel']) document.addEventListener(type, () => { if (holding) { holding = false; wakeHud(); } });
+
+  /** De hoes in de speler: een vierkantje naast de tekst, met het logo van de zender als badge. */
   function renderCover(station) {
     const art = state.vis.coverInPlayer && station ? state.art : null;
-    now.dataset.pos = state.vis.coverPosition;
     coverButton.hidden = !art;
     if (!art) {
       shownCover = null;
@@ -104,24 +141,34 @@ export function createPlayerPanel() {
     });
   }
 
+  /** Het beeld krijgt de verhouding van het scherm, zodat het alles vult zonder uit te rekken. */
+  function fit() {
+    const width = visWrap.clientWidth;
+    const height = visWrap.clientHeight;
+    if (!renderer || !width || !height) return;
+    const size = logicalSize(width / height);
+    renderer.resize(size.width, size.height);
+  }
+  new ResizeObserver(fit).observe(visWrap);
+
   function render() {
     const station = currentStation();
     panel.setAttribute('aria-label', tr('Speler', 'Player'));
+    menuButton.setAttribute('aria-label', tr('Menu: zenders en instellingen', 'Menu: stations and settings'));
+    fullButton.setAttribute('aria-label', document.fullscreenElement ? tr('Volledig scherm verlaten', 'Exit full screen') : tr('Volledig scherm', 'Full screen'));
     prev.setAttribute('aria-label', tr('Vorige zender', 'Previous station'));
     next.setAttribute('aria-label', tr('Volgende zender', 'Next station'));
     volume.setAttribute('aria-label', tr('Volume', 'Volume'));
-    hint.textContent = tr('Spatiebalk = pauze · ←/→ = vorige/volgende zender', 'Space = pause · ←/→ = previous/next station');
+    hint.textContent = tr('Spatiebalk = pauze · ←/→ = vorige/volgende zender · F = volledig scherm', 'Space = pause · ←/→ = previous/next station · F = full screen');
+    choose.textContent = tr('Kies een zender', 'Choose a station');
+    choose.hidden = Boolean(station);
     name.textContent = station ? station.name : BRAND.name;
-    artist.textContent = station
-      ? (state.title ? state.title : tr('Live radio uitzending', 'Live radio broadcast'))
-      : tr('Geen zender actief', 'No station active');
+    const [cls, text] = statusText();
+    dot.className = `dot ${cls}`;
+    artist.textContent = state.status === 'playing' ? (state.title || tr('Live radio uitzending', 'Live radio broadcast')) : text;
     const playing = state.status === 'playing' || state.status === 'loading';
     big.replaceChildren(icon(playing ? 'pause' : 'play', 34));
     big.setAttribute('aria-label', playing ? tr('Pauze', 'Pause') : tr('Afspelen', 'Play'));
-    const [cls, text] = statusText();
-    dot.className = `dot ${cls}`;
-    liveText.textContent = text;
-    tag.hidden = state.status !== 'playing';
     if (document.activeElement !== volume) {
       volume.value = String(Math.round(state.volume * 100));
       fillRange(volume);
@@ -132,6 +179,11 @@ export function createPlayerPanel() {
     } else {
       errorBox.hidden = true;
     }
+    if (hideable() !== lastHideable) {   // gaat spelen, of stopt: de bediening laten zien en de tijd opnieuw starten
+      lastHideable = hideable();
+      wakeHud();
+    }
+    if (!hideable()) panel.classList.remove('hud-off');
     renderCover(station);
     applyOptions();
     // zonder visualizer (of zonder lettertypes): het logo van de zender
@@ -149,7 +201,9 @@ export function createPlayerPanel() {
 
   loadFonts()
     .then((fonts) => {
-      renderer = new AmigaRenderer(fonts);
+      const width = visWrap.clientWidth;
+      const height = visWrap.clientHeight;
+      renderer = new AmigaRenderer(fonts, undefined, width && height ? logicalSize(width / height) : undefined);
       render();
       requestAnimationFrame(frame);
     })
@@ -161,11 +215,11 @@ export function createPlayerPanel() {
   // Dimmen: na DIM_DELAY_SECONDS zonder aanraking, beweging of toets zakt de helderheid van de visualizer naar DIM_LEVEL.
   let lastActivity = performance.now();
   let dimmed = false;
-  const wake = () => {
+  onActivity(() => {
     lastActivity = performance.now();
     if (dimmed) setDimmed(false);
-  };
-  for (const type of ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel']) document.addEventListener(type, wake, { passive: true });
+    if (panel.offsetParent !== null) wakeHud();
+  });
   function setDimmed(on) {
     dimmed = on;
     dimLayer.style.opacity = on ? String(1 - DIM_LEVEL) : '0';

@@ -38,6 +38,15 @@ docker compose pull
 docker compose up -d
 ```
 
+## Bediening
+
+- **Speler**: de visualizer vult het hele scherm en past zich aan de verhouding van je scherm aan (liggend, staand of breedbeeld). Dat werkt ook als je het venster verkleint of de telefoon draait.
+- **Bediening**: vorige, pauze, volgende en volume liggen over het beeld. Terwijl er muziek speelt verdwijnen ze na 8 seconden; beweeg de muis of tik op het beeld om ze terug te halen. Bij pauze of een storing blijven ze staan.
+- **Menu's**: het menu linksboven opent Zenders en Instellingen, elk op een eigen pagina. Met "← Speler" ga je terug; na het kiezen van een zender ga je vanzelf terug naar de visualizer. Onderaan de menupagina's staat een mini-speler.
+- **Terug naar de visualizer**: de menu's gaan na 10 seconden zonder beweging, tik of toets vanzelf terug naar de visualizer (alleen terwijl er muziek speelt, niet tijdens het typen). Esc doet het meteen.
+- **Toetsen**: spatiebalk = pauze, ← en → = vorige of volgende zender, F = volledig scherm (of de knop rechtsboven).
+- Bij het openen toont de pagina de speler als er al een laatste zender is, anders de zenderlijst.
+
 ## Instellingen (omgevingsvariabelen)
 
 Allemaal optioneel.
@@ -82,6 +91,22 @@ Voorbeelden (Caddy en Nginx) staan in de Engelse README.
 - **De visualizer** gebruikt WebAudio. Op een oude iPhone of iPad kan dat haperen: zet hem uit onder Instellingen; je ziet dan het logo.
 - Pauzeren bij een live stream is "verbinding verbreken"; afspelen pakt de live stream weer op.
 - De back-up is niet versleuteld. Een back-up van een Android-app past hier niet.
+
+## Lokaal testen (testserver)
+
+Voordat je iets publiceert kun je de webapp op je eigen computer proberen, bijvoorbeeld in de Linux-omgeving van een Chromebook. De testserver gebruikt een nagebootste GitHub met voorbeeldzenders (`dev/seed`), dus er wordt niets in je repositories aangeraakt.
+
+```bash
+sh testserver.sh            # demo met voorbeeldzenders
+sh testserver.sh --live     # de echte zenderlijst uit de publieke repository sceneradio-m3u
+```
+
+Open daarna <http://localhost:8081> in Chrome. Stoppen met Ctrl+C.
+
+- `--live` heeft geen token nodig: de standaardlijst is openbaar. Met `GITHUB_OWNER`, `GITHUB_REPO`, `GITHUB_REF` en `PLAYLIST_PATH` wijs je naar een eigen kopie.
+- `--update` doet alsof er een nieuwere versie is (voor de updatemelding), `--poort 8082` kiest een andere poort.
+- Streams afspelen en hoezen opzoeken gaan ook in de demo via internet. Alleen enkele zenders in de demo hebben een logo.
+- Het script gebruikt Node.js 20 of nieuwer; ontbreekt dat, dan gebruikt het Docker, en anders vertelt het hoe je Node.js installeert.
 
 ## Ontwikkelen
 

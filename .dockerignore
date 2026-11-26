@@ -5,3 +5,5 @@ data
 node_modules
 test
 *.md
+dev
+testserver.sh

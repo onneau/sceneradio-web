@@ -67,7 +67,7 @@ export function createStationsView() {
     return h('div', { class: 'cardwrap' },
       h('button', {
         class: `sc${selected ? ' now' : ''}`, type: 'button', 'aria-label': tr(`Speel ${station.name}`, `Play ${station.name}`), 'aria-current': selected ? 'true' : null,
-        onclick: () => play(station.id)
+        onclick: () => { location.hash = 'speler'; play(station.id); } // een zender kiezen brengt je terug naar de visualizer (eerst de pagina, dan pas de muziek)
       },
       active ? h('span', { class: 'badge' }, tr('Speelt nu', 'Playing')) : null,
       logoImage(station),

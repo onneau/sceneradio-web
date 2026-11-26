@@ -1,0 +1,231 @@
+#EXTM3U
+#EXTINF:-1 tvg-name="NPO Radio 1" tvg-logo="logos/npo-radio-1.jpg?v=dc83abb7" group-title="NPO;News;Local News;International News",NPO Radio 1
+https://icecast.omroep.nl/radio1-bb-mp3
+#EXTINF:-1 tvg-name="NPO Radio 2" tvg-logo="" group-title="NPO;Jazz;Soul;Evergreens",NPO Radio 2
+https://icecast.omroep.nl/radio2-bb-mp3
+#EXTINF:-1 tvg-name="NPO 3FM" tvg-logo="logos/npo-3fm.jpg?v=88b708c2" group-title="NPO;Pop;Top 40;Pop Rock",NPO 3FM
+https://icecast.omroep.nl/3fm-bb-mp3
+#EXTINF:-1 tvg-name="NPO Klassiek" tvg-logo="" group-title="NPO;Klassiek;Classical;Classic",NPO Klassiek
+https://icecast.omroep.nl/radio4-bb-mp3
+#EXTINF:-1 tvg-name="NPO Radio 5" tvg-logo="" group-title="NPO;Evergreens;60's;70's",NPO Radio 5
+https://icecast.omroep.nl/radio5-bb-mp3
+#EXTINF:-1 tvg-name="NPO FunX" tvg-logo="" group-title="NPO;Arabic;Hiphop;Reggae",NPO FunX
+https://icecast.omroep.nl/funx-bb-mp3
+#EXTINF:-1 tvg-name="NPO Sterren NL" tvg-logo="" group-title="NPO",NPO Sterren NL
+https://icecast.omroep.nl/radio2-sterrennl-mp3
+#EXTINF:-1 tvg-name="NPO Blend" tvg-logo="" group-title="NPO;Hiphop;Public Radio",NPO Blend
+https://icecast.omroep.nl/npoblend-bb-mp3
+#EXTINF:-1 tvg-name="Radio 538" tvg-logo="" group-title="Commercieel",Radio 538
+http://playerservices.streamtheworld.com/api/livestream-redirect/RADIO538AAC.aac
+#EXTINF:-1 tvg-name="538 Non-Stop" tvg-logo="" group-title="Commercieel;Non-stop;Top40",538 Non-Stop
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR09.mp3
+#EXTINF:-1 tvg-name="538 Tomorrowland One World Radio" tvg-logo="" group-title="Commercieel",538 Tomorrowland One World Radio
+https://playerservices.streamtheworld.com/api/livestream-redirect/OWR_WORLD_RADIO_NL.mp3
+#EXTINF:-1 tvg-name="Sky Radio" tvg-logo="" group-title="Commercieel;Soft Pop;Dance;Edm",Sky Radio
+https://playerservices.streamtheworld.com/api/livestream-redirect/SKYRADIO.mp3
+#EXTINF:-1 tvg-name="Sky Radio Hits" tvg-logo="" group-title="Commercieel;Pop",Sky Radio Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR01.mp3
+#EXTINF:-1 tvg-name="Sky Radio LoveSongs" tvg-logo="" group-title="Commercieel;Love Songs",Sky Radio LoveSongs
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR03.mp3
+#EXTINF:-1 tvg-name="Sky Radio 80's Hits" tvg-logo="" group-title="Commercieel;80s",Sky Radio 80's Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR04.mp3
+#EXTINF:-1 tvg-name="Sky Radio 90's Hits" tvg-logo="" group-title="Commercieel;90s",Sky Radio 90's Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR05.mp3
+#EXTINF:-1 tvg-name="Sky Radio Lounge" tvg-logo="" group-title="Commercieel;Lounge Music",Sky Radio Lounge
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR07.mp3
+#EXTINF:-1 tvg-name="Sky Radio Christmas" tvg-logo="" group-title="Commercieel;Christmas Music",Sky Radio Christmas
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR08.mp3
+#EXTINF:-1 tvg-name="Sky Radio Smooth Hits" tvg-logo="" group-title="Commercieel;Smooth",Sky Radio Smooth Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/SRGSTR15.mp3
+#EXTINF:-1 tvg-name="Qmusic" tvg-logo="" group-title="Commercieel;Pop;##browserfriendly;Mix",Qmusic
+https://stream.qmusic.nl/qmusic/mp3
+#EXTINF:-1 tvg-name="Qmusic Non-Stop" tvg-logo="" group-title="Commercieel",Qmusic Non-Stop
+https://stream.qmusic.nl/nonstop/mp3
+#EXTINF:-1 tvg-name="Qmusic Thema" group-title="Commercieel;Pop Music",Qmusic Thema
+https://stream.qmusic.nl/thema/mp3
+#EXTINF:-1 tvg-name="Qmusic Top 40" tvg-logo="" group-title="Commercieel",Qmusic Top 40
+https://stream.qmusic.nl/top40/mp3
+#EXTINF:-1 tvg-name="Qmusic Nederlandstalig" group-title="Commercieel",Qmusic Nederlandstalig
+https://stream.qmusic.nl/nederlandstalig/mp3
+#EXTINF:-1 tvg-name="Qmusic 90s & 00s" tvg-logo="" group-title="Commercieel",Qmusic 90s & 00s
+https://stream.qmusic.nl/90s-00s/mp3
+#EXTINF:-1 tvg-name="Qmusic Foute Uur" tvg-logo="" group-title="Commercieel",Qmusic Foute Uur
+https://stream.qmusic.nl/fouteuur/mp3
+#EXTINF:-1 tvg-name="Radio 10" tvg-logo="" group-title="Commercieel",Radio 10
+https://playerservices.streamtheworld.com/api/livestream-redirect/RADIO10.mp3
+#EXTINF:-1 tvg-name="Radio 10 Non-Stop" tvg-logo="" group-title="Commercieel;Top Hits",Radio 10 Non-Stop
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR15.mp3
+#EXTINF:-1 tvg-name="Radio 10 60s & 70s Hits" group-title="Commercieel",Radio 10 60s & 70s Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR18.mp3
+#EXTINF:-1 tvg-name="Radio 10 80s Hits" group-title="Commercieel",Radio 10 80s Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR20.mp3
+#EXTINF:-1 tvg-name="Radio 10 90s Hits" group-title="Commercieel",Radio 10 90s Hits
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR22.mp3
+#EXTINF:-1 tvg-name="Radio 10 Love Songs" group-title="Commercieel",Radio 10 Love Songs
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR04.mp3
+#EXTINF:-1 tvg-name="Radio 10 Disco Classics" tvg-logo="" group-title="Commercieel;Disco;Disco Funk;Euro Disco",Radio 10 Disco Classics
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR23.mp3
+#EXTINF:-1 tvg-name="Radio 10 Top 4000" group-title="Commercieel;Pop",Radio 10 Top 4000
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR24.mp3
+#EXTINF:-1 tvg-name="Radio Veronica" tvg-logo="" group-title="Commercieel;Greatest Hits;Pop Rock;Pop",Radio Veronica
+https://playerservices.streamtheworld.com/api/livestream-redirect/VERONICA.mp3
+#EXTINF:-1 tvg-name="JOE" tvg-logo="" group-title="Commercieel;70's;80's;90's",JOE
+https://stream.joe.nl/joe/mp3
+#EXTINF:-1 tvg-name="JOE Non-Stop" tvg-logo="" group-title="Commercieel;Non-stop Music",JOE Non-Stop
+https://stream.joe.nl/nonstop/mp3
+#EXTINF:-1 tvg-name="100% NL" tvg-logo="" group-title="Commercieel",100% NL
+https://playerservices.streamtheworld.com/api/livestream-redirect/100PNL_AAC.aac
+#EXTINF:-1 tvg-name="SLAM!" tvg-logo="" group-title="Commercieel;Dance;Pop;Electro",SLAM!
+https://stream.slam.nl/slam_mp3
+#EXTINF:-1 tvg-name="KINK" tvg-logo="" group-title="Commercieel;Alternative;Alternative Rock;Alternative Classics",KINK
+https://playerservices.streamtheworld.com/api/livestream-redirect/KINK.mp3
+#EXTINF:-1 tvg-name="KINK Distortion" tvg-logo="" group-title="Commercieel;Rock",KINK Distortion
+https://playerservices.streamtheworld.com/api/livestream-redirect/KINK_DISTORTION.mp3
+#EXTINF:-1 tvg-name="Sublime" tvg-logo="" group-title="Commercieel;Jazz;Soul;Classic Jazz",Sublime
+https://playerservices.streamtheworld.com/api/livestream-redirect/SUBLIME.mp3
+#EXTINF:-1 tvg-name="Arrow Classic Rock" tvg-logo="" group-title="Commercieel;Classic Rock;Rock",Arrow Classic Rock
+https://stream.player.arrow.nl/arrow
+#EXTINF:-1 tvg-name="Arrow Bluesbox" group-title="Commercieel",Arrow Bluesbox
+https://playerservices.streamtheworld.com/api/livestream-redirect/ARROWBLUESBOX.mp3
+#EXTINF:-1 tvg-name="BNR Nieuwsradio" tvg-logo="" group-title="Commercieel;Business;News;Business News",BNR Nieuwsradio
+https://stream.bnr.nl/bnr_mp3_128_20
+#EXTINF:-1 tvg-name="Radio Noordzee" tvg-logo="" group-title="Commercieel;News;Live Radio;Dutch Music",Radio Noordzee
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR17.mp3
+#EXTINF:-1 tvg-name="RTV Noord" tvg-logo="" group-title="Regionaal;Groningen;Local Radio;Stad En Ommeland",RTV Noord
+https://media.rtvnoord.nl/icecast/rtvnoord/radio
+#EXTINF:-1 tvg-name="Omrop Fryslân" tvg-logo="" group-title="Regionaal",Omrop Fryslân
+https://d3pvma9xb2775h.cloudfront.net/icecast/omropfryslan/radio.mp3
+#EXTINF:-1 tvg-name="RTV Drenthe" tvg-logo="" group-title="Regionaal",RTV Drenthe
+https://cdn.rtvdrenthe.nl/icecast/rtvdrenthe/rtvradio
+#EXTINF:-1 tvg-name="RTV Oost" tvg-logo="" group-title="Regionaal;Local News;News;Regional Programs",RTV Oost
+https://streams.rtvoost.nl/audio/oost/mp3
+#EXTINF:-1 tvg-name="Omroep Flevoland" tvg-logo="" group-title="Regionaal",Omroep Flevoland
+https://stream.omroepflevoland.nl/icecast/omroepflevoland/stream1
+#EXTINF:-1 tvg-name="Omroep Gelderland" tvg-logo="" group-title="Regionaal",Omroep Gelderland
+https://stream.omroepgelderland.nl/radiogelderland
+#EXTINF:-1 tvg-name="RTV Utrecht" tvg-logo="" group-title="Regionaal",RTV Utrecht
+https://media.rtvutrecht.nl/radiomutrecht-bb-mp3
+#EXTINF:-1 tvg-name="NH Radio" tvg-logo="" group-title="Regionaal",NH Radio
+https://ice.cr6.streamzilla.xlcdn.com:8000/sz=nhnieuws=NHRadio_mp3
+#EXTINF:-1 tvg-name="Omroep West" tvg-logo="" group-title="Regionaal",Omroep West
+https://liveradio.omroepwest.nl
+#EXTINF:-1 tvg-name="RTV Rijnmond" tvg-logo="" group-title="Regionaal",RTV Rijnmond
+https://dcur8bjarl5c2.cloudfront.net/icecast/rijnmond/radio-mp3
+#EXTINF:-1 tvg-name="Omroep Brabant" tvg-logo="" group-title="Regionaal;News;Omroep Brabant;Regional Radio",Omroep Brabant
+http://av.omroepbrabant.nl/icecast/omroepbrabant/mp3
+#EXTINF:-1 tvg-name="L1 Radio" tvg-logo="" group-title="Regionaal;Limburg;Nieuws",L1 Radio
+https://d34pj260kw1xmk.cloudfront.net/icecast/l1/radio-bb-mp3
+#EXTINF:-1 tvg-name="Omroep Zeeland" tvg-logo="" group-title="Regionaal;Classics;Folk;Local News",Omroep Zeeland
+https://d3isaxd2t6q8zm.cloudfront.net/icecast/omroepzeeland/omroepzeeland_radio
+#EXTINF:-1 tvg-name="Joy Radio" group-title="Regionaal",Joy Radio
+http://stream.joyradio.nl/joyradio
+#EXTINF:-1 tvg-name="Simone FM" group-title="Regionaal;Pop;Rock",Simone FM
+https://stream.simone.nl/simone
+#EXTINF:-1 tvg-name="Waterstad FM" tvg-logo="" group-title="Regionaal",Waterstad FM
+https://stream.waterstadfm.nl/waterstadfm
+#EXTINF:-1 tvg-name="Tukker FM" group-title="Regionaal;Folk;Oldies;Piratenhits",Tukker FM
+https://stream.tukkerfm.nl/tukkerfm
+#EXTINF:-1 tvg-name="Team FM" group-title="Regionaal",Team FM
+https://22323.live.streamtheworld.com/TEAMFMDRENTHEGRONINGEN.mp3
+#EXTINF:-1 tvg-name="Frysk FM" group-title="Regionaal",Frysk FM
+http://stream.frysk.fm/fryskfm
+#EXTINF:-1 tvg-name="Grunn FM" group-title="Regionaal;Pop;Streektaal",Grunn FM
+https://stream.grunnfm.nl/grunnfm
+#EXTINF:-1 tvg-name="LOA Ameland" group-title="Regionaal",LOA Ameland
+https://loa.beheerstream.nl:8040/stream
+#EXTINF:-1 tvg-name="NPO FunX Amsterdam" tvg-logo="" group-title="NPO FunX Regionaal",NPO FunX Amsterdam
+http://icecast.omroep.nl/funx-amsterdam-bb-mp3
+#EXTINF:-1 tvg-name="NPO FunX Rotterdam" group-title="NPO FunX Regionaal",NPO FunX Rotterdam
+http://icecast.omroep.nl/funx-rotterdam-bb-mp3
+#EXTINF:-1 tvg-name="NPO FunX Den Haag" group-title="NPO FunX Regionaal",NPO FunX Den Haag
+http://icecast.omroep.nl/funx-denhaag-bb-mp3
+#EXTINF:-1 tvg-name="NPO FunX Utrecht" group-title="NPO FunX Regionaal",NPO FunX Utrecht
+http://icecast.omroep.nl/funx-utrecht-bb-mp3
+#EXTINF:-1 tvg-name="Grand Prix Radio (Olav Mol)" tvg-logo="" group-title="Sport & Motorsport",Grand Prix Radio (Olav Mol)
+https://playerservices.streamtheworld.com/api/livestream-redirect/GRAND_PRIX_RADIO.mp3
+#EXTINF:-1 tvg-name="Grand Prix Radio Dance" tvg-logo="" group-title="Dance / Electronic",Grand Prix Radio Dance
+https://playerservices.streamtheworld.com/api/livestream-redirect/GPRDANCE.mp3
+#EXTINF:-1 tvg-name="538 Dance Department" tvg-logo="" group-title="Dance / Electronic",538 Dance Department
+https://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR08.mp3
+#EXTINF:-1 tvg-name="Candlelight Radio" tvg-logo="" group-title="Easy-Listening;Easy Listening;Romantic",Candlelight Radio
+https://playerservices.streamtheworld.com/api/livestream-redirect/CANDLELIGHT.mp3
+#EXTINF:-1 tvg-name="Radio 10 60's & 70's Hits" tvg-logo="" group-title="Overig",Radio 10 60's & 70's Hits
+http://22713.live.streamtheworld.com/TLPSTR18_SC
+#EXTINF:-1 tvg-name="SLAM! Non Stop" group-title="Dance;Electro;House",SLAM! Non Stop
+http://stream.radiocorp.nl/web10_mp3
+#EXTINF:-1 tvg-name="Intense Radio - We love Dance 256K" tvg-logo="" group-title="Clubhouse;Dance;Electronic",Intense Radio - We love Dance 256K
+https://secure.live-streams.nl/main
+#EXTINF:-1 tvg-name="Hi On Line Lounge Radio" group-title="320kbps;Electronic;Lounge",Hi On Line Lounge Radio
+http://mediaserv33.live-streams.nl:8036/live
+#EXTINF:-1 tvg-name="Concertzender Baroque" group-title="Classical",Concertzender Baroque
+http://streams.greenhost.nl:8080/barok
+#EXTINF:-1 tvg-name="Fantasy Italo Dance 90s radio" tvg-logo="" group-title="90s;Dance;Eurobeat",Fantasy Italo Dance 90s radio
+https://mscp2.live-streams.nl:8152/italodance
+#EXTINF:-1 tvg-name="Hi On Line Jazz Radio" group-title="320kbps;Jazz",Hi On Line Jazz Radio
+http://mediaserv38.live-streams.nl:8006/
+#EXTINF:-1 tvg-name="C-Dance RETRO" tvg-logo="" group-title="Dance;House;Retro",C-Dance RETRO
+http://s45.myradiostream.com:18304/
+#EXTINF:-1 tvg-name="Radio Continu" tvg-logo="" group-title="Classics;Variety",Radio Continu
+http://stream.radiocontinu.nl/radiocontinu
+#EXTINF:-1 tvg-name="Hi On Line World Radio" group-title="320kbps;African;Ethnic",Hi On Line World Radio
+http://mediaserv38.live-streams.nl:8027/live
+#EXTINF:-1 tvg-name="Pinguin Radio" group-title="Alternative Rock;Community Radio;Indie Pop",Pinguin Radio
+http://pr320.pinguinradio.com/
+#EXTINF:-1 tvg-name="Hardcore Radio" tvg-logo="" group-title="Hardcore;Hardcore Techno;Hard Techno",Hardcore Radio
+http://shoutcast1.hardcoreradio.nl/
+#EXTINF:-1 tvg-name="Grolloo Radio" group-title="Americana;Blues;Cajun",Grolloo Radio
+https://uk1.streamingpulse.com/ssl/grollooradio
+#EXTINF:-1 tvg-name="Concertzender Oude Muziek" group-title="Baroque;Classical;Early Music",Concertzender Oude Muziek
+http://streams.greenhost.nl:8080/oudemuziek
+#EXTINF:-1 tvg-name="Italo Power" tvg-logo="" group-title="Overig",Italo Power
+http://stream.radioitalopower.com:10018/italopower
+#EXTINF:-1 tvg-name="Deep Radio" group-title="Ambient;Dance;Deep House",Deep Radio
+http://stream.deep.radio/hd
+#EXTINF:-1 tvg-name="The Great American Songbook" group-title="Classic Hits;Crooner;Entertainer",The Great American Songbook
+http://tgas.dyndns.org:8001/;
+#EXTINF:-1 tvg-name="Nashville FM" group-title="Country",Nashville FM
+http://server-10.stream-server.nl:8300/
+#EXTINF:-1 tvg-name="Radio Stad Den Haag" group-title="Italo Disco",Radio Stad Den Haag
+http://94.228.133.3/
+#EXTINF:-1 tvg-name="Sjeffm" group-title="Classic Hits 60s 70a 80s",Sjeffm
+https://caster05.streampakket.com/proxy/8112/stream
+#EXTINF:-1 tvg-name="Radio Rijnmond" tvg-logo="" group-title="Overig",Radio Rijnmond
+http://d2e9xgjjdd9cr5.cloudfront.net/icecast/rijnmond/radio-mp3
+#EXTINF:-1 tvg-name="Real Hardstyle Radio" group-title="Early Hardstyle;Euphoric Hardstyle;Freestyle",Real Hardstyle Radio
+https://stream.realhardstyle.nl/
+#EXTINF:-1 tvg-name="All Oldies Channel" tvg-logo="" group-title="Folk;Oldies;Pop",All Oldies Channel
+http://radio.alloldieschannel.com:8000/stream
+#EXTINF:-1 tvg-name="192 Radio (HQ)" group-title="60s;70s;Oldies",192 Radio (HQ)
+http://server-27.stream-server.nl:8192/stream
+#EXTINF:-1 tvg-name="Concertzender Geen dag zonder Bach" tvg-logo="" group-title="Classical",Concertzender Geen dag zonder Bach
+http://streams.greenhost.nl:8080/bach
+#EXTINF:-1 tvg-name="Pinguin Blues" group-title="Blues;Blues Rock;Pinguin Radio",Pinguin Blues
+https://samcloud.spacial.com/api/listen?sid=93462&m=sc&rid=168006
+#EXTINF:-1 tvg-name="538 Dance Departmetn" tvg-logo="" group-title="Dance;House",538 Dance Departmetn
+http://playerservices.streamtheworld.com/api/livestream-redirect/TLPSTR01.mp3
+#EXTINF:-1 tvg-name="Pinguin Indie" tvg-logo="" group-title="Alternative;Alternative / Indie;Indie",Pinguin Indie
+http://streams.pinguinradio.com/PinguinRadio192.mp3
+#EXTINF:-1 tvg-name="Slam! Mixmarathon" group-title="Overig",Slam! Mixmarathon
+http://stream.radiocorp.nl/web13_mp3
+#EXTINF:-1 tvg-name="Joe 70s & 80s" tvg-logo="" group-title="70's;80's;Non-stop",Joe 70s & 80s
+https://icecast-qmusicnl-cdp.triple-it.nl/Joe_nl_high.aac
+#EXTINF:-1 tvg-name="Golden Oldies Radio" group-title="Overig",Golden Oldies Radio
+https://sonic.magicdragon.nl/8034/stream
+#EXTINF:-1 tvg-name="Slow Radio Gold" tvg-logo="" group-title="Slow",Slow Radio Gold
+https://stream11.slowradio.com/
+#EXTINF:-1 tvg-name="PerfectMoods – 24/7 Quality Lounge" group-title="Chillout;Lounge;Smooth Jazz",PerfectMoods – 24/7 Quality Lounge
+https://www.radioking.com/play/perfectmoods/104227
+#EXTINF:-1 tvg-name="NPO Radio 4 - Concerten" group-title="Classic;Classical;Opera",NPO Radio 4 - Concerten
+http://icecast.omroep.nl/radio4-eigentijds-mp3
+#EXTINF:-1 tvg-name="Radio 538 Ibiza" group-title="Dance",Radio 538 Ibiza
+http://29093.live.streamtheworld.com:3690/TLPSTR19_SC
+#EXTINF:-1 tvg-name="Hi On Line Latin Radio" group-title="320kbps;Latin;Latino",Hi On Line Latin Radio
+http://mediaserv33.live-streams.nl:8034/
+#EXTINF:-1 tvg-name="SoulRadio" tvg-logo="" group-title="Soul",SoulRadio
+https://29093.live.streamtheworld.com/SOULRADIOAAC_SC
+#EXTINF:-1 tvg-name="jungletrain.net - 24/7 drum and bass" group-title="Overig",jungletrain.net - 24/7 drum and bass
+https://chat.jungletrain.net/streamtest/;stream/1
+#EXTINF:-1 tvg-name="Radio 538 Nonstop" group-title="Overig",Radio 538 Nonstop
+http://25233.live.streamtheworld.com:3690/TLPSTR09_SC
+#EXTINF:-1 tvg-name="JAMM FM" tvg-logo="" group-title="00s;80s;90s",JAMM FM
+http://stream.jammfm.nl:8221/

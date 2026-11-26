@@ -4,14 +4,19 @@
 import { tr } from './i18n.js';
 
 const LOGICAL_HEIGHT = 256;
-const LOGICAL_WIDTH = 455; // 16:9
+const LOGICAL_WIDTH = 455; // 16:9, de standaard
+const PORTRAIT_WIDTH = 320; // op een staand scherm is het beeld zoveel beeldpunten breed
+const MIN_LOGICAL = 256;
+const MAX_LOGICAL = 683;    // zeer breed of zeer hoog (8:3): daarbuiten komt er een rand
 const COPPER_HEIGHT = 70;
+const SLOGAN_MIN_SCALE = 0.25;  // een slogan die niet past wordt kleiner tot dit
 const COPPER_BARS = 6;          // zes balken draaien om elkaar heen
 const COPPER_THICKNESS = 16;    // regels per balk
 const COPPER_ORBIT = 25;        // hoever het midden van een balk boven en onder het midden van de koperzone komt
 const TITLE_TOP = 12;
 const SLOGAN_TOP = 56;
 const SCROLLER_CENTER = 106;
+const TALL_SHIFT = 0.3;         // bij een staand scherm zakt de titel met dit deel van de extra hoogte; de rest wordt equalizer
 const WAVE_AMPLITUDE = 14;
 const EQ_BLOCK_HEIGHT = 3;
 const EQ_OVERLAP = 1;
@@ -27,6 +32,17 @@ const EQ_TOP_GAP = 16;          // de equalizer begint zoveel regels onder de sl
 const TITLE_SWING_SPEED = 0.5;  // de zendernaam doet er 1 / dit keer zo lang over als de oude fata morgana
 const TITLE_LEAN = 2.571;       // beeldpunten waarmee boven en onder tegengesteld bewegen, per beeldpunt van hazeAmplitude
 const TITLE_SWAY = 2.286;       // beeldpunten waarmee de hele naam heen en weer zwiert, per beeldpunt van hazeAmplitude
+const SLOGAN_LEAN_RATIO = 0.55; // de slogan helt en zwiert tegengesteld aan de zendernaam, met dit deel van zijn hellen ...
+const SLOGAN_SWAY_RATIO = 1.25; // ... en dit deel van zijn zwieren (dus iets sterker heen en weer, iets minder scheef)
+// Slogan-ritme: de tekst van een slogan verandert alleen op het linkerpunt van de zwaai. Daar staat de slogan stil
+// terwijl hij wordt gewist en de nieuwe wordt getypt; daarna wacht hij tot het volgende linkerpunt, zwaait minstens
+// een hele slag heen en weer en blijft dan weer op het linkerpunt staan voor de volgende tekst (zoals in de Android-app).
+const SLOGAN_TYPE_CPS = 16;     // letters per seconde bij het typen
+const SLOGAN_HOLD = 0.35;       // seconden dat de volledige tekst minstens stilstaat voor de zwaai begint
+const SLOGAN_GAP = 0.15;        // seconden leeg tussen wissen en het typen van de volgende
+const SLOGAN_ERASE = 0.45;      // seconden die het wissen van de hele tekst duurt
+const SLOGAN_MIN_SWING = 3.5;   // minstens zoveel seconden zwaait een slogan (en altijd een hele slag)
+const TAU = 2 * Math.PI;
 
 // Hoes en sterren (zoals AmigaVisualizer.kt)
 const COVER_SIZES = { small: 44, medium: 62, large: 84 };
@@ -141,6 +157,17 @@ function fontText(raw) {
 }
 
 const round = (v) => Math.round(v);
+
+/**
+ * De afmeting waarin getekend wordt voor een vlak met deze verhouding (breedte / hoogte), zodat het beeld het hele
+ * scherm vult zonder uitrekken: liggend altijd 256 regels hoog (zoals een Amiga PAL-scherm), staand 320 beeldpunten breed.
+ * 16:9 geeft 455 x 256, zoals voorheen.
+ */
+export function logicalSize(aspect) {
+  const a = Number.isFinite(aspect) && aspect > 0 ? aspect : LOGICAL_WIDTH / LOGICAL_HEIGHT;
+  const clamp = (v) => Math.min(MAX_LOGICAL, Math.max(MIN_LOGICAL, Math.round(v)));
+  return a >= 1 ? { width: clamp(LOGICAL_HEIGHT * a), height: LOGICAL_HEIGHT } : { width: PORTRAIT_WIDTH, height: clamp(PORTRAIT_WIDTH / a) };
+}
 
 function makeCanvas(w, h) {
   const canvas = document.createElement('canvas');
@@ -331,10 +358,10 @@ export function amigaCover(image, size) {
 }
 
 export class AmigaRenderer {
-  constructor(fonts, settings = DEFAULT_SETTINGS) {
+  constructor(fonts, settings = DEFAULT_SETTINGS, size = { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT }) {
     this.fonts = fonts;
-    this.width = LOGICAL_WIDTH;
-    this.height = LOGICAL_HEIGHT;
+    this.width = size.width;
+    this.height = size.height;
     this.cfg = { ...settings };
     this.palette = new Palette(this.cfg);
 
@@ -342,22 +369,14 @@ export class AmigaRenderer {
     this.canvas = main.canvas;
     this.ctx = main.ctx;
 
-    const titleHeight = Math.round(fonts.scopex.glyphHeight * MAX_TITLE_SCALE) + 3;
-    const title = makeCanvas(this.width, titleHeight);
-    this.titleCanvas = title.canvas;
-    this.titleCtx = title.ctx;
-    this.titleHeight = titleHeight;
-    this.titleSource = '\u0000';
-    this.titleGlyphHeight = titleHeight;
+    this.titleHeight = Math.round(fonts.scopex.glyphHeight * MAX_TITLE_SCALE) + 3;
+    this.titleGlyphHeight = this.titleHeight;
 
     this.scrollerFont = fonts.metallix;
     this.scrollScale = this.cfg.titleScale * this.cfg.scrollerRatio;
     this.scrollGlyphHeight = 0;
     this.scrollTop = 0;
     this.reflectionAxis = 0;
-    const reflection = makeCanvas(this.width, REFLECTION_ROWS);
-    this.reflectionCanvas = reflection.canvas;
-    this.reflectionCtx = reflection.ctx;
     this.scrollSource = '\u0000';
     this.scrollChars = [];
     this.scrollOffsets = [];
@@ -365,33 +384,28 @@ export class AmigaRenderer {
 
     this.sloganScale = this.cfg.sloganPx * SLOGAN_SCALE_PER_PX;
     this.sloganHeight = Math.round(fonts.forest.glyphHeight * this.sloganScale) + 2;
+    this.top = 0;
     this.sloganTop = SLOGAN_TOP;
-    const sloganMax = Math.round(fonts.forest.glyphHeight * MAX_SLOGAN_PX * SLOGAN_SCALE_PER_PX) + 2;
-    const slogan = makeCanvas(this.width, sloganMax);
-    this.sloganCanvas = slogan.canvas;
-    this.sloganCtx = slogan.ctx;
+    this.sloganMaxHeight = Math.round(fonts.forest.glyphHeight * MAX_SLOGAN_PX * SLOGAN_SCALE_PER_PX) + 2;
 
     this.opts = { ...RENDER_DEFAULTS };
     this.copperDriftPhase = 0;
     this.paletteCopperHue = this.cfg.copperHue;
     this.sloganList = [];
-    this.sloganPeriod = -1;
     this.sloganText = '';
+    this.sloganPhase = 'type';      // type -> swing -> erase -> gap
+    this.sloganScheduled = false;
+    this.sloganIndex = 0;
+    this.sloganResumePsi = 0;       // zwaaifase (linkerpunt) waarop de zwaai begint, als de tekst er dan staat
+    this.sloganLeavePsi = 0;        // zwaaifase (linkerpunt) waarop de zwaai stopt en het wissen begint
+    this.sloganStartClock = 0;      // sloganClock bij het begin van het typen, wissen of de lege pauze
+    this.sloganClock = 0;
     this.coverSource = null;
     this.coverCanvas = null;
     this.coverCanvasSize = 0;
     this.coverFade = 0;
 
     this.starCount = 70;
-    const random = mulberry32(1990);
-    const starSpace = this.height - COPPER_HEIGHT;
-    this.starX = []; this.starY = []; this.starLayer = [];
-    for (let i = 0; i < this.starCount; i++) {
-      this.starX.push(random() * this.width);
-      this.starY.push(random() * starSpace);
-      this.starLayer.push(Math.floor(random() * 3));
-    }
-
     this.barCount = 32;
     this.barLevels = new Float32Array(this.barCount);
     this.lastTime = 0;
@@ -400,14 +414,51 @@ export class AmigaRenderer {
     this.wavePhase = 0;
     this.copperPhase = 0;
     this.hazePhase = 0;
-    this.equalizerBottom = this.height - COPPER_HEIGHT + EQ_OVERLAP;
     this.equalizerTop = 0;
     this.maxBlocks = 1;
-    this.layoutScroller(this.scrollScale);
+    this.allocate();
 
     this.shadowFont = fonts.scopex.sheet('silhouet', [0x00, 0x0A, 0x2E]);
     this.scrollShadow = fonts.metallix.sheet('silhouet', [0x00, 0x20, 0x0C]);
     this.scrollHalf = fonts.metallix.sheet('half');
+  }
+
+  /** De tekenvlakken die van de afmeting afhangen: titel, spiegelbeeld, slogan, sterren en de indeling. */
+  allocate() {
+    const title = makeCanvas(this.width, this.titleHeight);
+    this.titleCanvas = title.canvas;
+    this.titleCtx = title.ctx;
+    this.titleSource = '\u0000';
+    const reflection = makeCanvas(this.width, REFLECTION_ROWS);
+    this.reflectionCanvas = reflection.canvas;
+    this.reflectionCtx = reflection.ctx;
+    const slogan = makeCanvas(this.width, this.sloganMaxHeight);
+    this.sloganCanvas = slogan.canvas;
+    this.sloganCtx = slogan.ctx;
+
+    const random = mulberry32(1990);
+    const starSpace = this.height - COPPER_HEIGHT;
+    this.starX = []; this.starY = []; this.starLayer = [];
+    for (let i = 0; i < this.starCount; i++) {
+      this.starX.push(random() * this.width);
+      this.starY.push(random() * starSpace);
+      this.starLayer.push(Math.floor(random() * 3));
+    }
+    this.equalizerBottom = this.height - COPPER_HEIGHT + EQ_OVERLAP;
+    this.top = Math.round(Math.max(0, this.height - LOGICAL_HEIGHT) * TALL_SHIFT);
+    this.sloganTop = this.top + SLOGAN_TOP;
+    this.layoutScroller(this.scrollScale);
+  }
+
+  /** Een andere afmeting (het scherm heeft een andere verhouding): het beeld wordt opnieuw opgebouwd, de rest blijft. */
+  resize(width, height) {
+    if (width === this.width && height === this.height) return;
+    this.width = width;
+    this.height = height;
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.ctx.imageSmoothingEnabled = false;
+    this.allocate();
   }
 
   setSettings(next) {
@@ -432,7 +483,7 @@ export class AmigaRenderer {
     }
     if (this.opts.slogans !== old.slogans) {
       this.sloganList = this.opts.slogans.filter((s) => fontText(s).trim());
-      this.sloganPeriod = -1;
+      this.sloganScheduled = false;   // opnieuw plannen met de nieuwe lijst
     }
     if (this.opts.coverSize !== old.coverSize) this.coverCanvas = null;
   }
@@ -476,6 +527,7 @@ export class AmigaRenderer {
     this.wavePhase += dt * this.cfg.waveSpeed;
     this.copperPhase += dt * this.cfg.copperSpeed;
     this.hazePhase += dt * this.cfg.hazeSpeed;
+    this.sloganClock += dt;
     this.updateCopperDrift(dt);
 
     this.setTitle(station);
@@ -509,7 +561,7 @@ export class AmigaRenderer {
     font.drawText(ctx, text, x + 1, 1, scale, this.shadowFont);
     font.drawText(ctx, text, x, 0, scale);
     this.titleGlyphHeight = Math.round(font.glyphHeight * scale) + 1;
-    this.sloganTop = Math.max(SLOGAN_TOP, TITLE_TOP + Math.round(font.glyphHeight * scale));
+    this.sloganTop = this.top + Math.max(SLOGAN_TOP, TITLE_TOP + Math.round(font.glyphHeight * scale));
     this.layoutScroller(Math.max(SCROLL_MIN_SCALE, scale * this.cfg.scrollerRatio));
   }
 
@@ -517,7 +569,7 @@ export class AmigaRenderer {
     this.scrollScale = scale;
     this.scrollGlyphHeight = Math.round(this.scrollerFont.glyphHeight * scale);
     this.scrollTop = Math.max(
-      Math.round(SCROLLER_CENTER - this.scrollGlyphHeight / 2),
+      Math.round(this.top + SCROLLER_CENTER - this.scrollGlyphHeight / 2),
       this.sloganTop + this.sloganHeight + 3 + WAVE_AMPLITUDE
     );
     this.reflectionAxis = this.scrollTop + WAVE_AMPLITUDE + this.scrollGlyphHeight + 2;
@@ -628,29 +680,87 @@ export class AmigaRenderer {
     }
   }
 
+  /** Begint met typen en plant de zwaai op het eerstvolgende linkerpunt waarop de tekst klaar kan zijn. */
+  startTyping(psi, rate) {
+    this.sloganIndex %= this.sloganList.length;
+    // Een slogan met {tijd} krijgt de tijd van nu; die blijft staan tot hij weer aan de beurt is.
+    this.sloganText = resolveSlogan(this.sloganList[this.sloganIndex]);
+    this.sloganPhase = 'type';
+    this.sloganStartClock = this.sloganClock;
+    const lead = (this.sloganText.length / SLOGAN_TYPE_CPS + SLOGAN_HOLD) * rate;
+    this.sloganResumePsi = Math.ceil((psi + lead) / TAU) * TAU;
+    this.sloganScheduled = true;
+  }
+
+  // De slogan volgt de zwaai van de zendernaam (fase psi, rad). De tekst verandert alleen op het linkerpunt,
+  // waar de slogan stilstaat (de zwaai heeft daar fase 0, 2π, 4π, ...). Per slogan:
+  //  1. type: de tekst wordt getypt en staat daarna stil, tot het eerstvolgende linkerpunt;
+  //  2. swing: de slogan zwaait tegengesteld aan de zendernaam, minstens een hele slag heen en weer;
+  //  3. erase: op een linkerpunt veegt de tekst letter voor letter weg, terwijl hij stilstaat;
+  //  4. gap: even leeg, dan volgt de volgende slogan met type.
   drawSlogan(t) {
-    if (this.sloganList.length === 0) return;
-    const period = 5.5;
-    const turn = Math.trunc(t / period);
-    if (turn !== this.sloganPeriod) {
-      // Een slogan met {tijd} krijgt de tijd van nu; die blijft staan tot hij weer aan de beurt is.
-      this.sloganPeriod = turn;
-      this.sloganText = resolveSlogan(this.sloganList[turn % this.sloganList.length]);
+    if (this.sloganList.length === 0) { this.sloganScheduled = false; return; }
+    const psi = this.hazePhase * TITLE_SWING_SPEED;                          // zwaaifase van de zendernaam
+    const rate = Math.max(0.05, this.cfg.hazeSpeed * TITLE_SWING_SPEED);     // radialen per seconde
+    if (!this.sloganScheduled) this.startTyping(psi, rate);
+    const since = this.sloganClock - this.sloganStartClock;
+
+    if (this.sloganPhase === 'type') {
+      if (psi >= this.sloganResumePsi) {
+        if (since * SLOGAN_TYPE_CPS >= this.sloganText.length) {
+          this.sloganPhase = 'swing';
+          this.sloganLeavePsi = this.sloganResumePsi + Math.max(1, Math.ceil(SLOGAN_MIN_SWING * rate / TAU)) * TAU;
+        } else {
+          this.sloganResumePsi += TAU;   // de tekst was nog niet klaar (zwaai ineens sneller gezet): volgend linkerpunt
+        }
+      }
+    } else if (this.sloganPhase === 'swing') {
+      if (psi >= this.sloganLeavePsi) { this.sloganPhase = 'erase'; this.sloganStartClock = this.sloganClock; }
+    } else if (this.sloganPhase === 'erase') {
+      if (since >= SLOGAN_ERASE) { this.sloganPhase = 'gap'; this.sloganStartClock = this.sloganClock; }
+    } else if (since >= SLOGAN_GAP) {
+      this.sloganIndex = (this.sloganIndex + 1) % this.sloganList.length;
+      this.startTyping(psi, rate);
     }
-    const local = t % period;
-    if (local > 4.6) return;
+
     const full = this.sloganText;
-    const shown = Math.min(full.length, Math.trunc(local * 16));
-    if (shown === 0) return;
+    const elapsed = this.sloganClock - this.sloganStartClock;
+    let shown = 0;
+    if (this.sloganPhase === 'type') shown = Math.min(full.length, Math.trunc(elapsed * SLOGAN_TYPE_CPS));
+    else if (this.sloganPhase === 'swing') shown = full.length;
+    else if (this.sloganPhase === 'erase') {
+      const left = 1 - elapsed / SLOGAN_ERASE;
+      shown = left <= 0 ? 0 : Math.ceil(full.length * left);
+    }
+    if (shown <= 0) return;
+
+    // Past de slogan niet naast de uitslag (langere eigen tekst, smal scherm), dan wordt hij kleiner.
+    const amplitude = this.cfg.hazeAmplitude;
+    const reach = Math.ceil(amplitude * (TITLE_SWAY * SLOGAN_SWAY_RATIO + TITLE_LEAN * SLOGAN_LEAN_RATIO)) + 2;
+    const limit = Math.min(this.width * 0.94, this.width - 2 * reach);
     const font = this.fonts.forest;
-    const x = (this.width - font.width(full, this.sloganScale)) / 2;
+    let scale = this.sloganScale;
+    while (font.width(full, scale) > limit && scale > SLOGAN_MIN_SCALE) scale -= 0.02;
+    // De plek volgt de volledige slogan, zodat de tekst tijdens het typen en wissen niet heen en weer springt.
+    const x = (this.width - font.width(full, scale)) / 2;
     const ctx = this.sloganCtx;
     ctx.clearRect(0, 0, this.width, this.sloganCanvas.height);
-    font.drawText(ctx, full.slice(0, shown), x, 0, this.sloganScale);
+    font.drawText(ctx, full.slice(0, shown), x, 0, scale);
     const image = ctx.getImageData(0, 0, this.width, this.sloganHeight);
     this.applyPlasma(image.data, t);
     ctx.putImageData(image, 0, 0);
-    this.ctx.drawImage(this.sloganCanvas, 0, this.sloganTop);
+
+    // Contra: precies tegengesteld aan de zendernaam (boven naar links als de naam boven naar rechts gaat, enz.),
+    // met dezelfde fase, maar iets minder scheef en iets verder heen en weer. Tijdens het typen en wissen staat de
+    // slogan stil op het linkerpunt (de naam staat dan het verst rechts); de zwaai sluit daar precies op aan.
+    const swinging = this.sloganPhase === 'swing';
+    const lean = swinging ? Math.sin(psi) * amplitude * TITLE_LEAN * SLOGAN_LEAN_RATIO : 0;
+    const sway = swinging ? Math.cos(psi) * amplitude * TITLE_SWAY * SLOGAN_SWAY_RATIO : amplitude * TITLE_SWAY * SLOGAN_SWAY_RATIO;
+    const half = this.sloganHeight / 2;
+    for (let y = 0; y < this.sloganHeight; y++) {
+      const dx = round(-sway + ((y - half) / half) * lean);
+      this.ctx.drawImage(this.sloganCanvas, 0, y, this.width, 1, dx, this.sloganTop + y, this.width, 1);
+    }
   }
 
   // Plasma-kleurcyclus: een golvend veld van sinussen bepaalt per pixel de kleur, en die schuift door de tijd
@@ -691,7 +801,7 @@ export class AmigaRenderer {
     const half = this.titleGlyphHeight / 2;
     for (let y = 0; y < this.titleHeight; y++) {
       const dx = round(sway - ((y - half) / half) * lean);
-      ctx.drawImage(this.titleCanvas, 0, y, this.width, 1, dx, TITLE_TOP + y, this.width, 1);
+      ctx.drawImage(this.titleCanvas, 0, y, this.width, 1, dx, this.top + TITLE_TOP + y, this.width, 1);
     }
   }
 
