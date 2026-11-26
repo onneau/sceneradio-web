@@ -1,2 +1,0 @@
-npm test          # all tests (Node.js 20 or newer)
-DATA_DIR=./data PORT=8080 node server/index.js
