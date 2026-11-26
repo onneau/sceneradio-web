@@ -1,0 +1,13 @@
+{
+  "name": "sceneradio-web",
+  "version": "1.0.0",
+  "description": "SceneRadio as a web app: listen to Dutch radio with an Amiga visualizer, in one Docker container.",
+  "type": "module",
+  "private": true,
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test test/*.test.js"
+  }
+}

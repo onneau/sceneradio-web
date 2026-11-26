@@ -1,0 +1,39 @@
+Required Notice: Copyright (c) 2026 Onno (https://github.com/onneau)
+
+Nederlandse versie: NOTICE.nl.md
+
+SceneRadio web is a hobby project by Onno.
+License: PolyForm Noncommercial License 1.0.0 (see the file LICENSE).
+
+In plain words (the license text itself prevails):
+- You may use, modify, fork and share the software for non-commercial purposes:
+  private, hobby, research, education and charities.
+- Commercial use is not allowed.
+- If you pass it on (including a modified version), include this file (NOTICE) and LICENSE. This keeps
+  the creator's name with it. The "Required Notice" line above must stay.
+- The idea and its execution are by Onno. A license protects the code, the design and the texts,
+  not the idea itself.
+- Contributions (pull requests) fall under the same license.
+
+No connection with stations or rights holders
+---------------------------------------------
+SceneRadio is in no way affiliated with, sponsored by or endorsed by the radio stations, broadcasters or
+companies whose name, logo or stream appears in the station list. All names and logos are the property of
+their owners and are only used to make a station recognizable. This project does not contain or store any
+audio itself: the web app only relays the streams of the stations to the listener, live, without keeping them.
+If a rights holder wants a name, logo or stream removed from here or from the station list
+(https://github.com/onneau/sceneradio-m3u), report it via GitHub
+(https://github.com/onneau); it will be removed as soon as possible.
+
+Parts that are not covered by this license
+------------------------------------------
+- The Amiga color fonts Metallix, Forest and Scopex (public/fonts/) come from Stone Oakvalley's Amiga
+  ColorFonts Generator (SOCFG). The original creators and their terms have not been established.
+  They are not covered by this project's license. The app icon (the S) was drawn with the Scopex font.
+- The Docker image contains Node.js and Alpine Linux, each with its own license. The web app itself uses
+  no npm packages.
+- Station logos that the web app takes from the station list belong to their owners (see above).
+- Covers and artist photos that the server looks up at the user's request (MusicBrainz, the Cover Art
+  Archive and Wikimedia Commons) belong to their creators or rights holders. The server keeps them only
+  in its cache folder, not in this repository. Photos on Wikimedia Commons each have their own license
+  (for example CC BY-SA, with attribution).

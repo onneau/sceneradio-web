@@ -1,0 +1,96 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04  # vast, zodat een nieuwe Ubuntu-standaard de build niet onverwacht verandert
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm test
+
+  image:
+    needs: test
+    runs-on: ubuntu-24.04  # vast, zodat een nieuwe Ubuntu-standaard de build niet onverwacht verandert
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - name: Inloggen bij ghcr.io
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: ver
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.ver.outputs.version }},enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Bij een nieuw versienummer in package.json: een GitHub Release met de tekst uit CHANGELOG.md.
+  # De webapp zelf toont die tekst onder Instellingen als "Update beschikbaar".
+  release:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: GitHub Release (alleen bij een nieuw versienummer)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v$VERSION"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG bestaat al; niets te doen."
+            exit 0
+          fi
+          NOTES="$RUNNER_TEMP/release-notes.md"
+          awk -v ver="$VERSION" '
+            /^## / { on = (($2 "") == (ver "")); next }
+            on { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > "$NOTES" || true
+          if [ ! -s "$NOTES" ]; then
+            echo "::warning::Geen regels gevonden onder '## $VERSION' in CHANGELOG.md; de Release krijgt een standaardtekst."
+            echo "- Nieuwe versie $VERSION." > "$NOTES"
+          fi
+          {
+            echo
+            echo "Bijwerken / Update: docker compose pull && docker compose up -d"
+          } >> "$NOTES"
+          gh release create "$TAG" \
+            --title "SceneRadio web $VERSION" \
+            --notes-file "$NOTES" \
+            --target "$GITHUB_SHA"

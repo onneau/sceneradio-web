@@ -1,0 +1,21 @@
+# Start:  docker compose up -d      (open http://<ip>:8080)
+services:
+  sceneradio-web:
+    build: .
+    image: ghcr.io/onneau/sceneradio-web:latest
+    container_name: sceneradio-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    environment:
+      TZ: ${TZ:-Europe/Amsterdam}
+      # true when the web app sits behind a reverse proxy that sets X-Forwarded-For (see README)
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      # Maximum number of simultaneous listeners (the container relays every stream)
+      MAX_LISTENERS: ${MAX_LISTENERS:-40}
+      # Update notice in Settings (false = off)
+      UPDATE_CHECK: ${UPDATE_CHECK:-true}
+      # Covers and artist photos in the visualizer and player (false = off)
+      COVERS: ${COVERS:-true}
+    volumes:
+      - ./data:/data

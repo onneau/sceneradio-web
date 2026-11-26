@@ -1,0 +1,14 @@
+{
+  "name": "SceneRadio",
+  "short_name": "SceneRadio",
+  "description": "Nederlandse radio met een Amiga-visualizer.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "lang": "nl",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
