@@ -1,26 +1,32 @@
 // Start van de pagina: bouwt het scherm op (navigatie, hoofdgebied, speler) en laadt de zenders.
 import { h, icon, toast } from './dom.js';
 import { state, subscribe, update, currentStation } from './state.js';
+import { setUnauthorizedHandler } from './api.js';
 import { loadConfig, loadStations } from './library.js';
 import { initPlayer } from './player.js';
 import { createPlayerPanel, createMiniPlayer } from './views/player-panel.js';
 import { createStationsView } from './views/stations.js';
+import { createUsersView } from './views/users.js';
 import { createSettingsView } from './views/settings.js';
 import { initArt } from './art.js';
 import { onActivity } from './activity.js';
 import { tr } from './i18n.js';
 import { BRAND } from './brand.js';
 
+// De pagina's in het menu; wat alleen voor de beheerder is, staat er alleen voor hem tussen. (Zonder ADMIN_PASSWORD is er geen
+// inlog: dan staat alles wat de beheerder kan zien er niet, behalve de uitleg hoe je het aanzet.)
 const nav = () => [
-  ['zenders', tr('Zenders', 'Stations'), 'list'],
-  ['instellingen', tr('Instellingen', 'Settings'), 'gear']
-];
-const MAIN_VIEWS = new Set(['zenders', 'instellingen']);
+  ['zenders', tr('Zenders', 'Stations'), 'list', true],
+  ['gebruikers', tr('Gebruikers', 'Users'), 'users', state.user?.role === 'admin'],
+  ['instellingen', tr('Instellingen', 'Settings'), 'gear', true]
+].filter((item) => item[3]);
+const MAIN_VIEWS = new Set(nav().map(([id]) => id));
 const REFRESH_MS = 5 * 60 * 1000;
 const MENU_IDLE_SECONDS = 10; // zonder beweging, tik of toets gaan de menu's na zoveel seconden terug naar de visualizer (alleen terwijl er muziek speelt)
 
 const views = {
   zenders: createStationsView(),
+  gebruikers: createUsersView(),
   instellingen: createSettingsView()
 };
 
@@ -40,6 +46,7 @@ function navButton(id, label, iconName) {
 /** De namen in het menu opnieuw zetten, bijvoorbeeld na een andere taal. */
 function relabel() {
   const labels = new Map(nav().map(([id, label]) => [id, label]));
+  for (const who of document.querySelectorAll('.who')) who.setAttribute('aria-label', tr(`Ingelogd als ${state.user.name}. Naar Instellingen.`, `Logged in as ${state.user.name}. Go to Settings.`));
   for (const button of document.querySelectorAll('.nav-item')) {
     const label = labels.get(button.dataset.view);
     if (!label) continue;
@@ -56,7 +63,11 @@ function buildShell() {
   // De menu's staan op eigen pagina's: een bovenbalk met een weg terug naar de speler en de pagina's zelf.
   const top = h('nav', { class: 'topbar', 'aria-label': tr('Hoofdmenu', 'Main menu') },
     h('button', { class: 'back', type: 'button', onclick: () => { location.hash = 'speler'; } }, icon('back', 22), h('span', { class: 'lbl' }, tr('Speler', 'Player'))),
-    nav().map(([id, label, glyph]) => navButton(id, label, glyph)));
+    nav().map(([id, label, glyph]) => navButton(id, label, glyph)),
+    state.user ? h('button', {
+      class: 'who', type: 'button', 'aria-label': tr(`Ingelogd als ${state.user.name}. Naar Instellingen.`, `Logged in as ${state.user.name}. Go to Settings.`),
+      onclick: () => { location.hash = 'instellingen'; }
+    }, icon('lock', 15), state.user.name) : null);
   const main = h('main', { class: 'main', id: 'main' }, Object.values(views).map((v) => v.el));
   const panel = createPlayerPanel();
   const mini = createMiniPlayer(() => { location.hash = 'speler'; });
@@ -81,11 +92,11 @@ function show(next) {
   menuIdle();
 }
 
-/** Terug naar de visualizer: na MENU_IDLE_SECONDS zonder activiteit, maar nooit midden in het typen of in een venster, en niet in het beheer. */
+/** Terug naar de visualizer: na MENU_IDLE_SECONDS zonder activiteit, maar nooit midden in het typen of in een venster, en niet in het beheer of bij de gebruikers. */
 let menuTimer = 0;
 function menuIdle() {
   clearTimeout(menuTimer);
-  if (view === 'speler') return;
+  if (view === 'speler' || view === 'gebruikers') return;
   menuTimer = setTimeout(() => {
     const typing = document.activeElement?.matches?.('input, textarea, select, [contenteditable]');
     const playing = state.status === 'playing' || state.status === 'loading';
@@ -127,6 +138,14 @@ function boot() {
   initArt();
   watchTitle();
 
+  // Verloopt de sessie (of schakelt de beheerder dit account uit), dan komt het inlogscherm.
+  let signedOut = false;
+  setUnauthorizedHandler(() => {
+    if (signedOut) return;
+    signedOut = true;
+    toast(tr('Je sessie is verlopen. Log opnieuw in.', 'Your session has expired. Log in again.'), { bad: true });
+    setTimeout(() => location.reload(), 1500);
+  });
 
   window.addEventListener('hashchange', fromHash);
   onActivity(menuIdle);

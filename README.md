@@ -9,7 +9,7 @@ SceneRadio as a website, in one Docker container: listen to Dutch radio with the
 - **Covers and artist photos**: the server looks up the cover of the song that is playing (MusicBrainz and the Cover Art Archive) and otherwise a photo of the artist (Wikimedia Commons). Your browser does not talk to those services itself.
 - **Bilingual**: Dutch and English, selectable under Settings (by default the page follows your browser).
 - **Backup**: favorites, volume, last station, language, visualizer settings and slogans of your browser in one `.json` file.
-- **Listen-only**: no management, no password, no tokens. The server never writes to GitHub.
+- **Listen-only**: no management of the station list, no tokens. The server never writes to GitHub. Optional: with an `ADMIN_PASSWORD` you turn on logging in, with accounts that the administrator creates (see *Logging in*); favorites and settings then follow your account on every device.
 
 No npm packages. Only Node.js 22 (included in the Docker image).
 
@@ -38,6 +38,15 @@ docker compose pull
 docker compose up -d
 ```
 
+## Logging in (optional)
+
+By default anyone who can reach the web app can listen. If you set an `ADMIN_PASSWORD` (at least 8 characters), logging in becomes required for everyone: nobody gets in without an account, not even to listen.
+
+- **Administrator**: log in with the name `admin` and the password from `ADMIN_PASSWORD`. That password is only in your compose file; if you change it, all sessions of the administrator become invalid. The administrator only manages the accounts: the station list and tokens are not part of it.
+- **Users**: the administrator creates them under **Users**, with a name and a password or with a random password that is shown once. A user can listen and changes their own password under Settings → My account. The administrator can reset a password, disable an account (the user is logged out right away) and delete it (with the favorites and settings). Creating an account yourself is not possible, and no email is needed. At most 100 users.
+- **What follows your account**: favorites, language, visualizer settings, slogans, volume and last station. They are on the server (`./data/profiles`) and are the same on every device; a change from another device shows up after refreshing the page. If you log in for the first time in a browser that already had favorites, they are merged with those of your account. Logging out wipes this data from the browser, so on a shared computer nothing of the previous user is left behind.
+- **Lost password**: the administrator sets a new one. If the administrator's password is lost, change `ADMIN_PASSWORD` and restart the container.
+
 ## Using the player
 
 - **Player**: the visualizer fills the whole screen and adapts to the shape of your screen (landscape, portrait or widescreen). That also works when you resize the window or turn the phone.
@@ -56,6 +65,8 @@ All optional.
 | `WEB_PORT` | `8080` | Port on the machine (in `.env` or the compose file, not in the container). |
 | `TZ` | `Europe/Amsterdam` | Time zone. |
 | `MAX_LISTENERS` | `40` | Maximum number of simultaneous listeners. The container relays every stream, so this protects your connection. |
+| `ADMIN_PASSWORD` | empty | Password of the administrator (account `admin`), at least 8 characters. With a password, logging in is required for everyone and the administrator creates the users. Empty: no login, anyone can listen. |
+| `SESSION_SECRET`, `SESSION_DAYS` | automatic, `30` | Signing and duration of the login session (with "Stay logged in"; otherwise one day). Without `SESSION_SECRET` one is kept in `/data/secret`. |
 | `TRUST_PROXY` | `false` | `true` behind a reverse proxy that sets `X-Forwarded-For` itself (see below). |
 | `COVERS` | `true` | Covers and artist photos. At `false` the server looks nothing up. |
 | `COVERS_RATE_PER_MINUTE` | `30` | How many cover lookups per minute one visitor may cause. |
@@ -97,11 +108,11 @@ location / {
 
 ## Security and privacy
 
-- There is nothing to log in to and nothing to write to: the server only reads the public station list and relays streams. It has no password, no tokens and no endpoints that change anything.
+- Nothing is written to GitHub: the server only reads the public station list and relays streams. It has no tokens and no endpoints that change the station list. Logging in is off by default; with `ADMIN_PASSWORD` it is required for everyone. Users' passwords are stored only as a scrypt hash, the session is a signed, HttpOnly, SameSite=Strict cookie that becomes invalid when the administrator disables or deletes the account or resets the password, and the message for a wrong attempt is the same for an unknown name and a wrong password. Wrong attempts are limited (5 per 5 minutes per address, 10 per 15 minutes per username); too many for one name block that name for 15 minutes, also for its real owner. Over plain http your password travels unencrypted through your network: use https through a reverse proxy.
 - The server only fetches streams from the station list, and refuses addresses on its own network (unless `ALLOW_PRIVATE_STREAMS=true`). Fetched covers are checked on file type and size.
 - The container does not run as root (only the start-up script changes the owner of `/data`).
 - Cover lookups are limited per visitor, and the number of listeners is capped (`MAX_LISTENERS`).
-- Favorites, volume, last station, language, visualizer settings and slogans stay in your own browser. The server keeps no accounts and no listening history.
+- Without logging in, favorites, volume, last station, language, visualizer settings and slogans stay in your own browser. With logging in they are kept per account on the server (`./data/profiles`). The server keeps no listening history.
 - Think about bandwidth before you open it to the internet: every listener costs the server one stream, both in and out.
 
 ## Known limitations
@@ -120,6 +131,8 @@ Before you publish anything you can try the web app on your own computer, for ex
 sh testserver.sh            # demo with sample stations
 sh testserver.sh --live     # the real station list from the public sceneradio-m3u repository
 ```
+
+In the demo, logging in is on: administrator `admin` with password `test`, and a sample user `anna` with password `proefanna1`. With `--open` there is no login, as without `ADMIN_PASSWORD`.
 
 Then open <http://localhost:8081> in Chrome. Stop with Ctrl+C.
 

@@ -19,6 +19,8 @@ export const composeText = () => `services:
       - "8080:8080"
     environment:
       TZ: Europe/Amsterdam
+      ${tr('# Optioneel: zet inloggen aan (verplicht voor iedereen; je logt in als admin en maakt de gebruikers aan)', '# Optional: turns on logging in (required for everyone; you log in as admin and create the users)')}
+      ADMIN_PASSWORD: ""
       ${tr('# Optioneel: maximaal aantal gelijktijdige luisteraars', '# Optional: maximum number of simultaneous listeners')}
       MAX_LISTENERS: "40"
     volumes:

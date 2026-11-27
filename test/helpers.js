@@ -248,10 +248,22 @@ export async function startApp({ github, env = {}, fetchBytes } = {}) {
   const app = createApp(config, { fetchBytes });
   const port = await listen(app.server);
   const base = `http://127.0.0.1:${port}`;
-  const request = async (method, url, { body, cookie, headers = {} } = {}) => {
+  // Is inloggen aan (ADMIN_PASSWORD), dan logt de testhulp zelf in als beheerder, tenzij een test een eigen cookie meegeeft
+  // (cookie: '...') of zonder inlog wil vragen (anonymous: true).
+  let autoCookie = null;
+  const adminCookie = async () => {
+    if (!autoCookie) {
+      const r = await fetch(`${base}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: config.adminPassword }) });
+      autoCookie = (r.headers.get('set-cookie') || '').split(';')[0];
+    }
+    return autoCookie;
+  };
+  const request = async (method, url, { body, cookie, headers = {}, anonymous = false } = {}) => {
+    let session = cookie;
+    if (session === undefined && !anonymous && config.adminPassword && !['/api/login', '/api/logout'].includes(url)) session = await adminCookie();
     const response = await fetch(base + url, {
       method,
-      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(cookie ? { Cookie: cookie } : {}), ...headers },
+      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(session ? { Cookie: session } : {}), ...headers },
       body: body !== undefined ? JSON.stringify(body) : undefined
     });
     const buffer = Buffer.from(await response.arrayBuffer());

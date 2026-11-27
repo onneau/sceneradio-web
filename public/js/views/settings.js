@@ -1,7 +1,8 @@
-// Instellingen: taal, weergave van de visualizer en de speler, slogans, back-up, verbinding, uitloggen, Docker en "Over".
-import { h, replace, toast } from '../dom.js';
+// Instellingen: mijn account, taal, weergave van de visualizer en de speler, slogans, back-up, verbinding, Docker en "Over".
+import { h, icon, replace, toast, copyText, initials } from '../dom.js';
 import { api } from '../api.js';
 import { state, subscribe, update, writeJson, setVis, setSlogans, addFavorites, activeSlogans } from '../state.js';
+import { sync, logout, logoutEverywhere, changePassword } from '../account.js';
 import { visualizerChanged, setVolume } from '../player.js';
 import { tr, locale, langSetting, setLangSetting } from '../i18n.js';
 import { BRAND, composeText, TIME_TOKEN, MAX_SLOGANS, MAX_SLOGAN_LENGTH } from '../brand.js';
@@ -12,30 +13,6 @@ const UPDATE_COMMANDS = 'docker compose pull\ndocker compose up -d';
 
 function kv(label, value, on = true) {
   return h('div', { class: 'kv' }, h('span', {}, label), h('em', { class: on ? '' : 'off' }, value));
-}
-
-/** Kopieert tekst; werkt ook op een gewone http-pagina (zonder Clipboard-API) via een selectie. */
-async function copyText(text, source) {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // val terug op de selectie hieronder
-  }
-  try {
-    const range = document.createRange();
-    range.selectNodeContents(source);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    const ok = document.execCommand('copy');
-    selection.removeAllRanges();
-    return ok;
-  } catch {
-    return false;
-  }
 }
 
 /** Een rij met een keuze uit een paar mogelijkheden (Uit / Subtiel / Alle kleuren). */
@@ -99,6 +76,85 @@ export function createSettingsView() {
         u.url ? h('a', { class: 'btn sm', href: u.url, target: '_blank', rel: 'noopener noreferrer' }, tr('Wat is nieuw (GitHub)', "What's new (GitHub)")) : null));
   }
 
+  // ------------------------------------------------------------------ mijn account
+
+  let passwordOpen = false; // het formulier "Wachtwoord wijzigen" staat open
+  let syncLine = null; // de regel met de bewaarstatus; die wordt los bijgewerkt, zonder de hele pagina te tekenen
+
+  const syncText = () => ({
+    saved: tr('Bewaard op de server', 'Saved on the server'),
+    pending: tr('Wordt bewaard…', 'Saving…'),
+    saving: tr('Wordt bewaard…', 'Saving…'),
+    error: tr('Bewaren lukt nu niet; we proberen het straks opnieuw.', 'Saving does not work right now; we will try again shortly.')
+  })[sync.state] || '';
+
+  function paintSync() {
+    if (!syncLine?.isConnected) return;
+    syncLine.textContent = syncText();
+    syncLine.classList.toggle('off', sync.state === 'error');
+  }
+
+  async function submitPassword(event, fields, message, button) {
+    event.preventDefault();
+    const [current, next, again] = fields.map((f) => f.value);
+    const fail = (text) => { message.textContent = text; message.hidden = false; };
+    message.hidden = true;
+    if (next.length < 8) return fail(tr('Een wachtwoord heeft minstens 8 tekens.', 'A password has at least 8 characters.'));
+    if (next !== again) return fail(tr('De twee nieuwe wachtwoorden zijn niet gelijk.', 'The two new passwords are not the same.'));
+    button.disabled = true;
+    try {
+      await changePassword(current, next);
+      passwordOpen = false;
+      toast(tr('Je wachtwoord is gewijzigd. Op je andere apparaten moet je opnieuw inloggen.', 'Your password was changed. On your other devices you have to log in again.'));
+      render();
+    } catch (error) {
+      button.disabled = false;
+      fail(error.message);
+    }
+  }
+
+  function passwordForm() {
+    const field = (label, auto) => h('input', { type: 'password', autocomplete: auto, maxlength: '200', 'aria-label': label });
+    const fields = [field(tr('Huidig wachtwoord', 'Current password'), 'current-password'), field(tr('Nieuw wachtwoord', 'New password'), 'new-password'), field(tr('Nieuw wachtwoord nog eens', 'New password again'), 'new-password')];
+    const message = h('div', { class: 'note bad', role: 'alert', hidden: true });
+    const button = h('button', { class: 'btn f sm', type: 'submit' }, tr('Wijzigen', 'Change'));
+    return h('form', { class: 'pwform', novalidate: true, onsubmit: (event) => submitPassword(event, fields, message, button) },
+      h('label', { class: 'field' }, h('span', {}, tr('Huidig wachtwoord', 'Current password')), fields[0]),
+      h('label', { class: 'field' }, h('span', {}, tr('Nieuw wachtwoord (minstens 8 tekens)', 'New password (at least 8 characters)')), fields[1]),
+      h('label', { class: 'field' }, h('span', {}, tr('Nieuw wachtwoord nog eens', 'New password again')), fields[2]),
+      message,
+      h('div', { class: 'btns', style: 'margin-top:0' }, button, h('button', { class: 'btn sm', type: 'button', onclick: () => { passwordOpen = false; render(); } }, tr('Annuleren', 'Cancel'))));
+  }
+
+  /** Wie ben ik, worden mijn favorieten en instellingen bewaard, wachtwoord wijzigen en uitloggen. Alleen als er is ingelogd. */
+  function accountCard() {
+    const user = state.user;
+    if (!user) return null;
+    syncLine = h('em', { class: sync.state === 'error' ? 'off' : '' }, syncText());
+    return h('div', { class: 'card', id: 'account' },
+      h('div', { class: 't' }, tr('Mijn account', 'My account')),
+      h('div', { class: 'me' },
+        h('div', { class: 'av', 'aria-hidden': 'true' }, initials(user.name).slice(0, 1)),
+        h('div', { class: 'g' }, h('b', {}, user.name), h('div', { class: 's' }, user.role === 'admin' ? tr('Beheerder', 'Administrator') : tr('Gebruiker', 'User')))),
+      h('div', { class: 'kv' }, h('span', {}, tr('Favorieten en instellingen', 'Favorites and settings')), syncLine),
+      passwordOpen ? passwordForm() : null,
+      h('div', { class: 'btns' },
+        user.role === 'admin' || passwordOpen ? null : h('button', { class: 'btn sm', type: 'button', onclick: () => { passwordOpen = true; render(); } }, icon('key', 14), tr('Wachtwoord wijzigen', 'Change password')),
+        h('button', { class: 'btn sm', type: 'button', onclick: logout }, icon('logout', 14), tr('Uitloggen', 'Log out'))),
+      user.role === 'admin' ? h('div', { class: 's' }, tr('Het wachtwoord van de beheerder stel je in met ADMIN_PASSWORD in docker-compose.yml.', 'The administrator password is set with ADMIN_PASSWORD in docker-compose.yml.')) : null,
+      h('div', { class: 's' }, tr('Favorieten, taal, visualizer-instellingen, slogans, volume en laatste zender volgen je account op elk apparaat; na het vernieuwen van de pagina zie je wijzigingen van een ander apparaat.', 'Favorites, language, visualizer settings, slogans, volume and last station follow your account on every device; after refreshing the page you see changes from another device.')),
+      h('div', { class: 'btns' },
+        h('button', {
+          class: 'btn sm', type: 'button',
+          onclick: async () => {
+            try {
+              await logoutEverywhere();
+            } catch (error) {
+              toast(error.message, { bad: true });
+            }
+          }
+        }, tr('Overal uitloggen', 'Log out everywhere'))));
+  }
 
   // ------------------------------------------------------------------ taal
 
@@ -150,7 +206,9 @@ export function createSettingsView() {
       toggleRow('pcover', tr('Hoes in de speler', 'Cover in the player'), tr('Tik op de hoes voor volledig scherm.', 'Tap the cover for full screen.'), vis.coverInPlayer && coversOn, (on) => setVis({ coverInPlayer: on }), !coversOn),
       toggleRow('photo', tr('Foto van de artiest als er geen hoes is', 'Photo of the artist if there is no cover'),
         config?.deezer ? tr('Wikimedia, daarna Deezer.', 'Wikimedia, then Deezer.') : tr('Wikimedia.', 'Wikimedia.'), vis.artistPhoto && coversOn, (on) => setVis({ artistPhoto: on }), !coversOn),
-      h('div', { class: 's', style: 'margin-top:10px' }, tr('Favorieten, volume en de laatst beluisterde zender worden in deze browser bewaard. De hoezen zoekt de server voor je op; je browser praat niet met MusicBrainz of Wikimedia.', 'Favorites, volume and the last station you listened to are kept in this browser. The server looks up the covers for you; your browser does not talk to MusicBrainz or Wikimedia.')));
+      h('div', { class: 's', style: 'margin-top:10px' }, state.user
+        ? tr('Favorieten, volume en de laatst beluisterde zender bewaart de webapp bij je account op de server. De hoezen zoekt de server voor je op; je browser praat niet met MusicBrainz of Wikimedia.', 'The web app keeps favorites, volume and the last station you listened to with your account on the server. The server looks up the covers for you; your browser does not talk to MusicBrainz or Wikimedia.')
+        : tr('Favorieten, volume en de laatst beluisterde zender worden in deze browser bewaard. De hoezen zoekt de server voor je op; je browser praat niet met MusicBrainz of Wikimedia.', 'Favorites, volume and the last station you listened to are kept in this browser. The server looks up the covers for you; your browser does not talk to MusicBrainz or Wikimedia.')));
   }
 
   // ------------------------------------------------------------------ slogans
@@ -305,13 +363,14 @@ export function createSettingsView() {
       h('h1', {}, tr('Instellingen', 'Settings')),
       updateCard(),
       h('div', { class: 'two' },
-        h('div', {}, languageCard(), displayCard(), slogansCard(), backupCard()),
+        h('div', {}, accountCard(), languageCard(), displayCard(), slogansCard(), backupCard()),
         h('div', {},
           h('div', { class: 'card' },
             h('div', { class: 't' }, tr('Verbinding', 'Connection')),
             kv(tr('Zenderlijst', 'Station list'), config ? config.repo : '…'),
             kv(tr('Aantal zenders', 'Number of stations'), String(state.stations.length)),
             kv(tr('Laatst opgehaald', 'Last fetched'), updated || tr('nog niet', 'not yet'), Boolean(updated)),
+            kv(tr('Inloggen', 'Logging in'), config?.loginRequired ? tr('verplicht', 'required') : tr('uit (geen ADMIN_PASSWORD)', 'off (no ADMIN_PASSWORD)'), Boolean(config?.loginRequired)),
             state.loadError ? h('div', { class: 'note bad' }, state.loadError) : null),
           h('div', { class: 'card' },
             h('div', { class: 't' }, tr('Draaien in Docker', 'Running in Docker')),
@@ -327,9 +386,10 @@ export function createSettingsView() {
     if (root.hidden) return;
     // Niet midden in het slepen van de schuif of het typen van slogans alles opnieuw tekenen.
     const active = document.activeElement;
-    if (root.contains(active) && active.matches('input[type=range], textarea')) return;
+    if (root.contains(active) && active.matches('input[type=range], input[type=password], textarea')) return;
     render();
   });
+  document.addEventListener('ew:sync', paintSync);
   document.addEventListener('ew:lang', () => { if (!root.hidden) render(); });
   return { el: root, enter() { render(); loadUpdate(); } };
 }

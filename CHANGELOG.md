@@ -7,6 +7,19 @@ Release, and the web app shows them under Settings at "Update available", in the
 Per versie een kopje `## <versienummer>` met een opsomming, in twee talen. De GitHub Action zet de regels in de GitHub
 Release, en de webapp toont ze onder Instellingen bij "Update beschikbaar", in de taal van de bezoeker.
 
+## 1.2.0
+### English
+- New: logging in with your own account. If you set `ADMIN_PASSWORD`, logging in is required (the administrator logs in as `admin`) and the administrator creates the accounts for others under Users. Without `ADMIN_PASSWORD` nothing changes
+- New: favorites, language, visualizer settings, slogans, volume and last station belong to your account and apply on every device; logging out wipes them from the browser
+- New: Users (administrator only): create an account (with a random password that is shown once), reset the password, disable and delete; Settings → My account: change password, log out and log out everywhere
+- Note: with an `ADMIN_PASSWORD`, nobody can listen without an account any more. The login screen is in Dutch and English
+
+### Nederlands
+- Nieuw: inloggen met een eigen account. Stel je `ADMIN_PASSWORD` in, dan is inloggen verplicht (de beheerder logt in als `admin`) en maakt de beheerder onder Gebruikers de accounts voor anderen aan. Zonder `ADMIN_PASSWORD` verandert er niets
+- Nieuw: favorieten, taal, visualizer-instellingen, slogans, volume en laatste zender horen bij je account en gelden op elk apparaat; uitloggen wist ze uit de browser
+- Nieuw: Gebruikers (alleen voor de beheerder): account aanmaken (met een willekeurig wachtwoord dat één keer wordt getoond), wachtwoord opnieuw instellen, uitschakelen en verwijderen; Instellingen → Mijn account: wachtwoord wijzigen, uitloggen en overal uitloggen
+- Let op: met een `ADMIN_PASSWORD` kan niemand meer luisteren zonder account. Het inlogscherm staat in het Nederlands en Engels
+
 ## 1.1.1
 ### English
 - Fixed: the controls now always disappear after 8 seconds without movement, also when the mouse stays over the buttons, a button still has focus or the stream stalls briefly; only when paused or on an error do they stay

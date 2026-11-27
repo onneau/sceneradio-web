@@ -1,5 +1,7 @@
 // Tests voor de SceneRadio-webapp: alleen luisteren. De zenderlijst komt zonder token uit de publieke repository, de streams
-// lopen via de container, en er bestaat geen beheer: geen wachtwoord, geen tokens, geen schrijvende endpoints.
+// lopen via de container, en er bestaat geen beheer van de zenderlijst: geen tokens, geen schrijvende endpoints. Inloggen
+// (met ADMIN_PASSWORD) is optioneel; de meeste tests hier draaien zonder, zoals een webapp zonder wachtwoord. De tests van
+// de accounts zelf staan in accounts.test.js.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -12,7 +14,7 @@ const LOGO = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(
 
 async function withApp(files, env, fn) {
   const github = await new FakeGitHub(files).start();
-  const ctx = await startApp({ github, env: { GITHUB_READ_TOKEN: '', ...env } });
+  const ctx = await startApp({ github, env: { GITHUB_READ_TOKEN: '', ADMIN_PASSWORD: '', ...env } });
   try {
     await fn({ ...ctx, github });
   } finally {
@@ -38,7 +40,9 @@ test('de lijst en de logo\'s komen zonder token uit de publieke repository, en d
     await withApp(playlist(radio), {}, async ({ request, github }) => {
       const config = (await request('GET', '/api/config')).json;
       assert.equal(config.repo, 'onneau/sceneradio-m3u');
-      assert.deepEqual(Object.keys(config).sort(), ['covers', 'deezer', 'repo', 'version']);
+      assert.deepEqual(Object.keys(config).sort(), ['covers', 'deezer', 'loginRequired', 'repo', 'user', 'version']);
+      assert.equal(config.loginRequired, false);
+      assert.equal(config.user, null);
       assert.equal(config.deezer, false);
 
       const list = await request('GET', '/api/stations');
@@ -138,14 +142,13 @@ test('streams in het eigen netwerk van de server worden niet doorgegeven (SSRF)'
   }
 });
 
-test('er is geen beheer: wachtwoord, tokens en schrijvende endpoints bestaan niet', async () => {
+test('er is geen beheer van de zenderlijst: geen tokens en geen schrijvende endpoints, ook niet voor de beheerder', async () => {
   const radio = await new FakeRadio().start();
   try {
-    // De testhulp zet ADMIN_PASSWORD en GITHUB_ADMIN_TOKEN wel in de omgeving; de app mag er niets mee doen.
-    await withApp(playlist(radio), {}, async ({ request, github }) => {
+    // De testhulp zet GITHUB_ADMIN_TOKEN wel in de omgeving; de app mag er niets mee doen. Hier is inloggen aan
+    // en logt de testhulp in als beheerder: zelfs dan bestaat er geen /api/admin.
+    await withApp(playlist(radio), { ADMIN_PASSWORD: 'geheim' }, async ({ request, github }) => {
       for (const [method, url, body] of [
-        ['POST', '/api/login', { password: 'geheim' }],
-        ['POST', '/api/logout', {}],
         ['GET', '/api/admin/status'],
         ['POST', '/api/admin/station', { name: 'X', url: 'https://example.org/x.mp3' }],
         ['POST', '/api/admin/logos', { ids: ['goede-zender'], logo: LOGO.toString('base64') }],
@@ -154,6 +157,9 @@ test('er is geen beheer: wachtwoord, tokens en schrijvende endpoints bestaan nie
         const r = await request(method, url, body === undefined ? {} : { body });
         assert.equal(r.status, 404, `${method} ${url}`);
       }
+      const config = (await request('GET', '/api/config')).json;
+      assert.equal(config.canWrite, undefined);
+      assert.equal(config.hasReadToken, undefined);
       // ?all=1 geeft niets extra's: nog steeds de openbare lijst, zonder stream-URL's
       const all = await request('GET', '/api/stations?all=1');
       assert.equal(all.status, 200);
@@ -165,15 +171,29 @@ test('er is geen beheer: wachtwoord, tokens en schrijvende endpoints bestaan nie
   }
 });
 
-test('de code bevat geen beheer: geen auth-module, geen wachtwoord of tokens, geen /api/admin', () => {
+test('de sessiecookie heeft een eigen naam (sr_session), zodat EtherWave web op dezelfde computer niet in de weg zit', async () => {
+  const radio = await new FakeRadio().start();
+  try {
+    await withApp(playlist(radio), { ADMIN_PASSWORD: 'geheim' }, async ({ request, config }) => {
+      assert.equal(config.cookieName, 'sr_session');
+      const r = await request('POST', '/api/login', { body: { name: 'admin', password: 'geheim' } });
+      assert.equal(r.status, 200);
+      assert.match(r.headers.get('set-cookie'), /^sr_session=/);
+    });
+  } finally {
+    await radio.stop();
+  }
+});
+
+test('de code bevat geen beheer van de zenderlijst: geen beheerpagina, geen GitHub-token, geen /api/admin', () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const files = [];
   for (const dir of ['../server', '../public/js', '../public/js/views']) {
     for (const name of readdirSync(path.join(here, dir))) if (name.endsWith('.js')) files.push(path.join(here, dir, name));
   }
-  assert.equal(files.some((f) => /auth\.js$|manage\.js$|logo-picker\.js$/.test(f)), false);
+  assert.equal(files.some((f) => /manage\.js$|logo-picker\.js$/.test(f)), false);
   for (const file of files) {
     const text = readFileSync(file, 'utf8');
-    assert.doesNotMatch(text, /ADMIN_PASSWORD|GITHUB_ADMIN_TOKEN|adminToken|\/api\/admin|\/api\/login|setCookie/, path.basename(file));
+    assert.doesNotMatch(text, /GITHUB_ADMIN_TOKEN|adminToken|\/api\/admin|RepoPublisher/, path.basename(file));
   }
 });

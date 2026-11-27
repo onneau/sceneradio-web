@@ -3,6 +3,8 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { Store } from './store.js';
+import { Auth } from './auth.js';
+import { Users, AccountError, generatePassword } from './users.js';
 import { Library } from './library.js';
 import { GitHubError } from './github.js';
 import { proxyStream } from './streams.js';
@@ -24,6 +26,7 @@ const MIME = {
 };
 
 const MAX_BODY = 8 * 1024 * 1024;
+const MAX_LOGIN_BODY = 4 * 1024; // het inlogverzoek mag iedereen sturen, dus klein houden
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -43,14 +46,14 @@ function sendJson(res, status, value, headers = {}) {
   res.end(body);
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = MAX_BODY) {
   const type = String(req.headers['content-type'] || '');
   if (!type.toLowerCase().startsWith('application/json')) throw new HttpError(415, tr('Verwacht JSON.', 'Expected JSON.'));
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new HttpError(413, tr('Het verzoek is te groot.', 'The request is too large.'));
+    if (size > maxBytes) throw new HttpError(413, tr('Het verzoek is te groot.', 'The request is too large.'));
     chunks.push(chunk);
   }
   try {
@@ -75,10 +78,16 @@ function clientIp(req, trustProxy) {
   return req.socket.remoteAddress || '';
 }
 
+function isSecure(req) {
+  return String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https' || Boolean(req.socket.encrypted);
+}
 
 
 export function createApp(config, { fetchBytes } = {}) {
   const store = new Store(config.dataDir);
+  const users = new Users(config.dataDir);
+  const auth = new Auth(config, users);
+  const profileLimit = new RateLimiter(120, 60 * 1000); // opslaan van het profiel, per account
   const library = new Library(config, store);
   const updates = new UpdateChecker(config);
 
@@ -99,6 +108,18 @@ export function createApp(config, { fetchBytes } = {}) {
     pending: s.pending
   });
 
+  /** Met inloggen mogen logo's en hoezen alleen in de browser van de bezoeker blijven, niet in een gedeelde cache (reverse proxy). */
+  const scope = () => (auth.enabled ? 'private' : 'public');
+
+  /** Het account achter het verzoek, mits dat de beheerder is. */
+  function requireAdmin(req) {
+    if (!auth.enabled) throw new HttpError(403, tr('Inloggen staat uit: stel ADMIN_PASSWORD in.', 'Logging in is off: set ADMIN_PASSWORD.'));
+    const session = auth.sessionOf(req);
+    if (!session) throw new HttpError(401, tr('Log eerst in.', 'Log in first.'));
+    if (session.role !== 'admin') throw new HttpError(403, tr('Dit mag alleen de beheerder.', 'Only the administrator may do this.'));
+    return session;
+  }
+
 
   async function ensureLibrary() {
     await library.refresh().catch(() => {});
@@ -112,10 +133,18 @@ export function createApp(config, { fetchBytes } = {}) {
     const p = url.pathname;
     let m;
 
+    // Is inloggen aan (ADMIN_PASSWORD), dan kan niemand iets zonder account, behalve inloggen zelf en vragen of dat nodig is.
+    const session = auth.enabled ? auth.sessionOf(req) : null;
+    const open = (method === 'GET' && p === '/api/config') || (method === 'POST' && (p === '/api/login' || p === '/api/logout'));
+    if (auth.enabled && !session && !open) throw new HttpError(401, tr('Log eerst in.', 'Log in first.'));
+
     if (method === 'GET' && p === '/api/config') {
+      if (auth.enabled && !session) return sendJson(res, 200, { loginRequired: true, user: null });
       return sendJson(res, 200, {
         version: config.version,
         repo: `${config.owner}/${config.repo}`,
+        loginRequired: auth.enabled,
+        user: session ? { name: session.name, role: session.role } : null,
         covers: Boolean(covers),
         deezer: Boolean(covers) && config.coversDeezer
       });
@@ -149,7 +178,7 @@ export function createApp(config, { fetchBytes } = {}) {
       res.writeHead(200, {
         'Content-Type': 'image/jpeg',
         'Content-Length': bytes.length,
-        'Cache-Control': versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'
+        'Cache-Control': versioned ? `${scope()}, max-age=31536000, immutable` : `${scope()}, max-age=3600`
       });
       return res.end(bytes);
     }
@@ -188,17 +217,108 @@ export function createApp(config, { fetchBytes } = {}) {
         if (error instanceof BusyError) throw new HttpError(503, tr('Er worden nu te veel hoezen opgezocht.', 'Too many covers are being looked up right now.'));
         throw error;
       }
-      if (!hit) return sendJson(res, 404, { error: tr('Geen hoes gevonden.', 'No cover found.') }, { 'Cache-Control': 'public, max-age=600' });
+      if (!hit) return sendJson(res, 404, { error: tr('Geen hoes gevonden.', 'No cover found.') }, { 'Cache-Control': `${scope()}, max-age=600` });
       res.writeHead(200, {
         'Content-Type': hit.type,
         'Content-Length': hit.bytes.length,
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': `${scope()}, max-age=86400`,
         'X-Art-Kind': hit.kind
       });
       return res.end(hit.bytes);
     }
 
+    if (method === 'POST' && p === '/api/login') return login(req, res);
 
+    if (method === 'POST' && p === '/api/logout') {
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.clearCookie(isSecure(req)) });
+    }
+
+    if (p === '/api/me' || p.startsWith('/api/me/')) return meRoute(req, res, method, p, session);
+    if (p === '/api/users' || p.startsWith('/api/users/')) {
+      requireAdmin(req);
+      return usersRoute(req, res, method, p);
+    }
+
+
+    throw new HttpError(404, tr('Niet gevonden.', 'Not found.'));
+  }
+
+  // ------------------------------------------------------------------ inloggen en accounts
+
+  async function login(req, res) {
+    if (!auth.enabled) throw new HttpError(403, tr('Inloggen staat uit: stel ADMIN_PASSWORD in.', 'Logging in is off: set ADMIN_PASSWORD.'));
+    const ip = clientIp(req, config.trustProxy);
+    const body = await readJsonBody(req, MAX_LOGIN_BODY);
+    const name = Auth.cleanName(body.name); // zonder naam: de beheerder (zo werkte inloggen voor de komst van accounts)
+    if (auth.limited(ip, name)) throw new HttpError(429, tr('Te vaak een fout wachtwoord. Probeer het over enkele minuten opnieuw.', 'Too many wrong passwords. Try again in a few minutes.'));
+    // De poging telt meteen mee, nog voor de (trage) controle: honderd gelijktijdige pogingen komen er zo niet allemaal langs.
+    auth.fail(ip, name);
+    const result = await auth.authenticate(name, body.password);
+    if (result.error === 'disabled') throw new HttpError(403, tr('Dit account is uitgeschakeld. Vraag de beheerder.', 'This account is disabled. Ask the administrator.'));
+    if (!result.session) throw new HttpError(401, tr('Gebruikersnaam of wachtwoord klopt niet.', 'Username or password is not correct.'));
+    auth.succeed(ip, name); // goed: de tellers van dit adres en deze naam beginnen opnieuw
+    users.touchLogin(result.session.uid);
+    const remember = body.remember !== false;
+    return sendJson(res, 200, { ok: true, user: { name: result.session.name, role: result.session.role } },
+      { 'Set-Cookie': auth.setCookie(auth.makeToken(result.session, { remember }), { remember }, isSecure(req)) });
+  }
+
+  /** Het eigen account: profiel (favorieten en instellingen), wachtwoord en overal uitloggen. */
+  async function meRoute(req, res, method, p, session) {
+    if (!session) throw new HttpError(403, tr('Inloggen staat uit: stel ADMIN_PASSWORD in.', 'Logging in is off: set ADMIN_PASSWORD.'));
+    if (method === 'GET' && p === '/api/me') {
+      return sendJson(res, 200, { user: { name: session.name, role: session.role }, profile: users.getProfile(session.uid) });
+    }
+    if (method === 'POST' && p === '/api/me/profile') {
+      if (!profileLimit.take(session.uid)) throw new HttpError(429, tr('Te vaak opgeslagen. Probeer het zo meteen opnieuw.', 'Saved too often. Try again in a moment.'));
+      const body = await readJsonBody(req);
+      return sendJson(res, 200, { ok: true, updatedAt: users.saveProfile(session.uid, body.backup) });
+    }
+    if (method === 'POST' && p === '/api/me/password') {
+      if (session.role === 'admin') throw new HttpError(400, tr('Het wachtwoord van de beheerder stel je in met ADMIN_PASSWORD.', 'The administrator password is set with ADMIN_PASSWORD.'));
+      const ip = clientIp(req, config.trustProxy);
+      const body = await readJsonBody(req, MAX_LOGIN_BODY);
+      if (auth.limited(ip, session.name)) throw new HttpError(429, tr('Te vaak een fout wachtwoord. Probeer het over enkele minuten opnieuw.', 'Too many wrong passwords. Try again in a few minutes.'));
+      auth.fail(ip, session.name); // zoals bij inloggen: de poging telt meteen
+      const { user } = await users.check(session.name, String(body.current ?? ''));
+      if (!user) throw new HttpError(403, tr('Je huidige wachtwoord klopt niet.', 'Your current password is not correct.'));
+      auth.succeed(ip, session.name);
+      await users.setPassword(user.id, body.next);
+      // Alle andere apparaten zijn nu uitgelogd; dit apparaat krijgt meteen een nieuwe cookie.
+      const remember = auth.isRemembered(req);
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.setCookie(auth.makeToken(session, { remember }), { remember }, isSecure(req)) });
+    }
+    if (method === 'POST' && p === '/api/me/logout-all') {
+      users.logoutAll(session.uid);
+      return sendJson(res, 200, { ok: true }, { 'Set-Cookie': auth.clearCookie(isSecure(req)) });
+    }
+    throw new HttpError(404, tr('Niet gevonden.', 'Not found.'));
+  }
+
+  /** De gebruikers beheren: alleen voor de beheerder (requireAdmin is al gecontroleerd). */
+  async function usersRoute(req, res, method, p) {
+    let m;
+    if (method === 'GET' && p === '/api/users') return sendJson(res, 200, { users: users.list() });
+    if (method === 'POST' && p === '/api/users') {
+      const body = await readJsonBody(req, MAX_LOGIN_BODY);
+      const given = typeof body.password === 'string' && body.password !== '' ? body.password : null;
+      const password = given ?? generatePassword();
+      const user = await users.create(body.name, password);
+      return sendJson(res, 200, { ok: true, user, ...(given === null ? { password } : {}) }); // een gekozen wachtwoord sturen we niet terug
+    }
+    if (method === 'POST' && (m = p.match(/^\/api\/users\/(u[0-9a-f]{12})\/(password|disabled|delete)$/))) {
+      const [, id, action] = m;
+      const body = await readJsonBody(req, MAX_LOGIN_BODY);
+      if (action === 'password') {
+        const given = typeof body.password === 'string' && body.password !== '' ? body.password : null;
+        const password = given ?? generatePassword();
+        await users.setPassword(id, password);
+        return sendJson(res, 200, { ok: true, ...(given === null ? { password } : {}) });
+      }
+      if (action === 'disabled') return sendJson(res, 200, { ok: true, user: users.setDisabled(id, body.disabled === true) });
+      users.remove(id);
+      return sendJson(res, 200, { ok: true });
+    }
     throw new HttpError(404, tr('Niet gevonden.', 'Not found.'));
   }
 
@@ -258,6 +378,7 @@ export function createApp(config, { fetchBytes } = {}) {
         return undefined;
       }
       if (error instanceof HttpError) return sendJson(res, error.status, { error: error.message });
+      if (error instanceof AccountError) return sendJson(res, error.status, { error: tr(error.nl, error.en) });
       if (error instanceof GitHubError) return sendJson(res, 502, { error: error.message });
       console.error('[sceneradio-web] onverwachte fout:', error);
       return sendJson(res, 500, { error: tr('Er ging iets mis op de server.', 'Something went wrong on the server.') });
@@ -270,5 +391,5 @@ export function createApp(config, { fetchBytes } = {}) {
   // Alvast ophalen, zodat de eerste bezoeker niet hoeft te wachten.
   const warmUp = () => library.refresh().catch((error) => console.warn('[sceneradio-web] playlist ophalen mislukt:', error.message));
 
-  return { server, store, library, listeners, warmUp, covers };
+  return { server, store, auth, users, library, listeners, warmUp, covers };
 }

@@ -1,6 +1,6 @@
 {
   "name": "sceneradio-web",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "SceneRadio as a web app: listen to Dutch radio with an Amiga visualizer, in one Docker container.",
   "type": "module",
   "private": true,

@@ -20,7 +20,7 @@ function packageVersion() {
   try {
     return JSON.parse(readFileSync(path.join(here, '..', 'package.json'), 'utf8')).version;
   } catch {
-    return '1.1.1';
+    return '1.2.0';
   }
 }
 
@@ -40,6 +40,12 @@ export function loadConfig(env = process.env) {
     rawUrl: (clean(env.GITHUB_RAW_URL) || 'https://raw.githubusercontent.com').replace(/\/+$/, ''),
     readToken: clean(env.GITHUB_READ_TOKEN),
 
+    // Het wachtwoord van de beheerder (gebruikersnaam "admin"). Zonder wachtwoord is inloggen uit en kan iedereen luisteren.
+    adminPassword: env.ADMIN_PASSWORD === undefined ? '' : String(env.ADMIN_PASSWORD),
+    sessionSecret: clean(env.SESSION_SECRET),
+    sessionDays: number(env.SESSION_DAYS, 30, 1, 365),
+    // Cookies kennen geen poorten: twee webapps op hetzelfde adres (8080 en 8081) hebben elk een eigen cookienaam nodig.
+    cookieName: 'sr_session',
     trustProxy: flag(env.TRUST_PROXY),
 
     playlistTtlMs: number(env.PLAYLIST_TTL_SECONDS, 300, 10, 86400) * 1000,

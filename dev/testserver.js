@@ -4,7 +4,8 @@
 //                                     GitHub nodig, en er wordt niets naar een echte repository geschreven.
 //   node dev/testserver.js --live     de echte zenderlijst van GitHub, alleen lezen
 //
-// Opties: --poort 8082  --host 0.0.0.0  --update (doet alsof er een nieuwere versie is)  --help
+// Inloggen staat aan: beheerder "admin" met wachtwoord "test", en een proefgebruiker "anna" met wachtwoord "proefanna1".
+// Opties: --poort 8082  --host 0.0.0.0  --update (doet alsof er een nieuwere versie is)  --open (zonder inloggen)  --help
 // Streams afspelen en hoezen opzoeken gaan ook in de demo gewoon via internet.
 import { readdirSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,6 +27,7 @@ const HELP = `Gebruik: sh testserver.sh [opties]
   --poort N      poort (standaard ${DEFAULT_PORT}); ook PORT=N werkt
   --host ADRES   luisteradres (standaard 127.0.0.1, alleen deze computer)
   --update       doe alsof er een nieuwere versie is, om de updatemelding te zien
+  --open         zonder inloggen, zoals een webapp zonder ADMIN_PASSWORD (standaard: inloggen als admin / test of anna / proefanna1)
   --help         deze uitleg
 
 Stoppen: Ctrl+C.`;
@@ -42,7 +44,7 @@ function readSeed(dir, prefix = '') {
 }
 
 /** Start de webapp (en in de demo de nep-GitHub). Geeft alles terug wat nodig is om hem weer te stoppen. */
-export async function startTestServer({ live = false, update = false, port = DEFAULT_PORT, host = '127.0.0.1', sourceEnv = process.env } = {}) {
+export async function startTestServer({ live = false, update = false, open = false, port = DEFAULT_PORT, host = '127.0.0.1', sourceEnv = process.env } = {}) {
   const github = live ? null : await new FakeGitHub(readSeed(path.join(here, 'seed'))).start();
   const dataDir = mkdtempSync(path.join(tmpdir(), 'webapp-testserver-'));
   const env = {
@@ -60,6 +62,7 @@ export async function startTestServer({ live = false, update = false, port = DEF
           PLAYLIST_PATH: sourceEnv.PLAYLIST_PATH,
           UPDATE_CHECK: 'false'
         }),
+    ADMIN_PASSWORD: open ? '' : 'test'
   };
   const config = loadConfig(env);
   if (github) {
@@ -71,6 +74,7 @@ export async function startTestServer({ live = false, update = false, port = DEF
     };
   }
   const app = createApp(config);
+  if (!open) await app.users.create('anna', 'proefanna1'); // een gewone gebruiker om mee te proberen
   await new Promise((resolve, reject) => {
     app.server.once('error', reject);
     app.server.listen(port, host, resolve);
@@ -93,11 +97,12 @@ export async function startTestServer({ live = false, update = false, port = DEF
 }
 
 function parseArgs(args) {
-  const options = { live: false, update: false, port: process.env.PORT || DEFAULT_PORT, host: '127.0.0.1' };
+  const options = { live: false, update: false, open: false, port: process.env.PORT || DEFAULT_PORT, host: '127.0.0.1' };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--live') options.live = true;
     else if (arg === '--update') options.update = true;
+    else if (arg === '--open') options.open = true;
     else if (arg === '--poort' || arg === '--port') options.port = args[++i];
     else if (arg === '--host') options.host = args[++i];
     else if (arg === '--help' || arg === '-h') {
@@ -137,6 +142,9 @@ async function main() {
   const lines = [
     `${NAME} ${config.version}: testserver, ${github ? 'demo met voorbeeldzenders' : 'echte zenderlijst van GitHub (alleen lezen)'}`,
     `  open in Chrome : ${url}`,
+    config.adminPassword
+      ? `  inloggen       : admin / ${config.adminPassword} (beheerder), anna / proefanna1 (gebruiker)`
+      : '  inloggen       : uit (--open): iedereen kan luisteren',
     `  stoppen        : Ctrl+C`
   ];
   if (options.host !== '127.0.0.1' && options.host !== 'localhost') {

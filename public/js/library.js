@@ -4,7 +4,7 @@ import { update } from './state.js';
 
 export async function loadConfig() {
   const config = await api('/api/config');
-  update({ config });
+  update({ config, user: config.user ?? null });
   return config;
 }
 

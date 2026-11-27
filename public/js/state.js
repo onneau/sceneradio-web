@@ -12,12 +12,20 @@ function readJson(key, fallback) {
   }
 }
 
+// De sleutels die bij een account horen: met inloggen gelden ze op elk apparaat (zie account.js). 'ew.lang' staat in i18n.js.
+export const SYNCED_KEYS = ['ew.favorites', 'ew.last', 'ew.volume', 'ew.visualizer', 'ew.vis', 'ew.slogans'];
+let syncHook = () => {};
+export function setSyncHook(fn) {
+  syncHook = fn;
+}
+
 export function writeJson(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
     // opslag geblokkeerd (privé-venster): de instelling geldt dan alleen voor deze sessie
   }
+  if (SYNCED_KEYS.includes(key)) syncHook(key);
 }
 
 // De weergave-instellingen van de visualizer en de speler (dezelfde keuzes als in de apps), in deze browser bewaard.
@@ -77,7 +85,20 @@ export const state = {
   vis: coerceVis(readJson('ew.vis', {})),
   slogans: coerceSlogans(readJson('ew.slogans', null)), // null = de standaardslogans
   art: null, // { image, url, kind } van het huidige nummer, of null
+  user: null // { name, role: 'admin' | 'user' } als er is ingelogd, anders null
 };
+
+/** Alles uit de opslag van de browser opnieuw lezen (na het terugzetten van een account, of het wissen bij uitloggen). */
+export function reloadFromStorage() {
+  state.favorites = new Set(readJson('ew.favorites', []));
+  state.currentId = readJson('ew.last', null);
+  state.volume = readJson('ew.volume', 0.8);
+  state.visualizer = readJson('ew.visualizer', true);
+  state.vis = coerceVis(readJson('ew.vis', {}));
+  state.slogans = coerceSlogans(readJson('ew.slogans', null));
+}
+
+export const isAdmin = () => state.user?.role === 'admin';
 
 /** De slogans die nu door de visualizer lopen. */
 export function activeSlogans() {

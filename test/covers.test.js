@@ -352,5 +352,11 @@ test('servermeldingen volgen X-Lang (en Accept-Language)', async () => {
     assert.equal(dutch.json.error, 'Niet gevonden.');
     const both = await request('GET', '/api/onbekend', { headers: { 'X-Lang': 'nl', 'Accept-Language': 'en' } });
     assert.equal(both.json.error, 'Niet gevonden.', 'X-Lang gaat voor');
+    const login = await request('POST', '/api/login', { body: { password: 'fout' }, headers: { 'X-Lang': 'en' } });
+    assert.equal(login.json.error, 'Username or password is not correct.');
+    const loginNl = await request('POST', '/api/login', { body: { name: 'iemand', password: 'fout' } });
+    assert.equal(loginNl.json.error, 'Gebruikersnaam of wachtwoord klopt niet.');
+    const closed = await request('GET', '/api/stations', { headers: { 'X-Lang': 'en' }, anonymous: true });
+    assert.equal(closed.json.error, 'Log in first.');
   });
 });

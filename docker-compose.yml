@@ -11,6 +11,9 @@ services:
       TZ: ${TZ:-Europe/Amsterdam}
       # true when the web app sits behind a reverse proxy that sets X-Forwarded-For (see README)
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      # Logging in: with an ADMIN_PASSWORD (at least 8 characters) logging in is required for everyone, you log in as "admin"
+      # and create the users yourself. Empty = no login, anyone can listen.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # Maximum number of simultaneous listeners (the container relays every stream)
       MAX_LISTENERS: ${MAX_LISTENERS:-40}
       # Update notice in Settings (false = off)

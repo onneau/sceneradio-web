@@ -1,4 +1,5 @@
 // Kleine hulpjes om pagina-onderdelen te bouwen zonder innerHTML (zo kan een zendernaam nooit code worden).
+import { locale } from './i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -58,7 +59,12 @@ const ICONS = {
   check: 'M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z',
   sync: 'M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z',
   eyeoff: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27z',
-  trash: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'
+  lock: 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zM9 8V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9z',
+  trash: 'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z',
+  users: 'M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z',
+  key: 'M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z',
+  logout: 'M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z',
+  eye: 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'
 };
 
 export function icon(name, size = 24) {
@@ -83,6 +89,87 @@ export function toast(message, { bad = false, ms = 4500 } = {}) {
   toastTimer = setTimeout(() => el.remove(), ms);
 }
 
+/** "1 nov 2026" voor "2026-11-01". */
+export function formatDay(day) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day || '');
+  if (!parts) return day || '';
+  const date = new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
+  return date.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }).replace(/\./g, '');
+}
+
+/** "2026-11-01T04:00:12Z" -> "1 nov 05:00" in de tijd van dit apparaat. */
+export function formatRun(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso || '';
+  const day = date.toLocaleDateString(locale(), { day: 'numeric', month: 'short' }).replace(/\./g, '');
+  const time = date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+  return `${day} ${time}`;
+}
+
+/**
+ * Een venster boven de pagina (role="dialog"): Escape of een tik ernaast sluit het, Tab blijft erbinnen en de focus gaat terug
+ * naar waar je was. `set(...kinderen)` vult het venster opnieuw, bijvoorbeeld met de uitkomst na een formulier.
+ */
+export function openDialog(label) {
+  const previous = document.activeElement;
+  const box = h('div', { class: 'dlg', role: 'dialog', 'aria-modal': 'true', 'aria-label': label });
+  const overlay = h('div', { class: 'dlg-bg' }, box);
+  const focusable = () => [...box.querySelectorAll('input:not([disabled]), button:not([disabled]), textarea, select, a[href]')];
+  function close() {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+    if (previous && document.contains(previous)) previous.focus?.();
+  }
+  function onKey(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    } else if (event.key === 'Tab') {
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !box.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !box.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    }
+  }
+  overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(); });
+  document.addEventListener('keydown', onKey, true);
+  document.body.append(overlay);
+  return {
+    box,
+    close,
+    set(...children) {
+      replace(box, ...children);
+      (box.querySelector('input:not([type=hidden])') || box.querySelector('button.f') || box.querySelector('button'))?.focus();
+    }
+  };
+}
+
+/** Kopieert tekst; werkt ook op een gewone http-pagina (zonder Clipboard-API) via een selectie van `source`. */
+export async function copyText(text, source) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // val terug op de selectie hieronder
+  }
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(source);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const ok = document.execCommand('copy');
+    selection.removeAllRanges();
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 export function initials(name) {
   const words = String(name).replace(/[^\p{L}\p{N} ]/gu, '').split(/\s+/).filter(Boolean);
